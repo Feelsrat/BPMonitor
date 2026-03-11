@@ -2,16 +2,15 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const PASSWORD = process.env.PWORD || 'defaultpassword';
+const JWT_SECRET = process.env.JWT_SECRET || PASSWORD; // Use password as JWT secret
 // Use volume mount (/app/data) for persistent storage on Fly.io, or local app dir for local dev
 const DATA_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'bp-data.json');
-
-// Simple in-memory session store (valid tokens)
-const validTokens = new Set();
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
@@ -20,7 +19,7 @@ if (!fs.existsSync(DATA_DIR)) {
 
 
 
-// Middleware to check authentication token
+// Middleware to check JWT authentication
 function checkAuth(req, res, next) {
   // Allow health check and auth endpoints without authentication
   // Note: When middleware is mounted at '/api/', req.path only has the route part (not /api)
@@ -29,10 +28,19 @@ function checkAuth(req, res, next) {
   }
   
   const token = req.headers['authorization']?.replace('Bearer ', '');
-  if (!token || !validTokens.has(token)) {
+  
+  if (!token) {
+    console.log('Auth check - No token provided');
     return res.status(401).json({ error: 'Unauthorized. Please log in.' });
   }
-  next();
+  
+  try {
+    jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (err) {
+    console.log('Auth check - Invalid JWT:', err.message);
+    return res.status(401).json({ error: 'Unauthorized. Invalid or expired token.' });
+  }
 }
 
 // Middleware
@@ -75,14 +83,18 @@ app.get('/api/health/', (req, res) => {
 app.post('/api/auth/', (req, res) => {
   const { password } = req.body;
   
+  console.log('Auth attempt - password provided:', password ? 'yes' : 'no');
+  
   // Check password
   if (password !== PASSWORD) {
+    console.log('❌ Password mismatch');
     return res.status(401).json({ error: 'Invalid password' });
   }
   
-  // Generate token (simple UUID-like)
-  const token = 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  validTokens.add(token);
+  // Generate JWT token (expires in 7 days)
+  const token = jwt.sign({ authenticated: true }, JWT_SECRET, { expiresIn: '7d' });
+  
+  console.log('✅ Login successful! JWT token created');
   
   res.json({ success: true, token });
 });
