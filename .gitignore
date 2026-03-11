@@ -3,35 +3,13 @@
 .env.local
 .env.*.local
 
+# Fly.io configuration (sensitive)
+fly.toml
+
 # Backend
-backend/__pycache__/
-backend/*.py[cod]
-backend/*$py.class
-backend/*.so
-backend/.Python
-backend/build/
-backend/develop-eggs/
+backend/node_modules/
 backend/dist/
-backend/downloads/
-backend/eggs/
-backend/.eggs/
-backend/lib/
-backend/lib64/
-backend/parts/
-backend/sdist/
-backend/var/
-backend/wheels/
-backend/pip-wheel-metadata/
-backend/share/python-wheels/
-backend/pip-delete-this-directory.txt
-backend/.venv
-backend/env/
-backend/venv/
-backend/ENV/
-backend/env.bak/
-backend/venv.bak/
-backend/staticfiles/
-backend/db.sqlite3
+backend/*.log
 
 # Frontend
 frontend/node_modules/
@@ -55,6 +33,3 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
-
-# Fly.io
-.fly/
