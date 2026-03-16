@@ -14,7 +14,8 @@
     <!-- Login Modal -->
     <div v-else-if="!isAuthenticated" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">BP Monitor</h2>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">BP Monitor</h2>
+        <p class="text-sm text-gray-600 text-center mb-6">Enter your password to access</p>
         <form @submit.prevent="login" class="space-y-4">
           <BaseInput
             v-model="password"
@@ -35,6 +36,14 @@
         <BaseAlert v-if="loginError" type="error" class="mt-4">
           {{ loginError }}
         </BaseAlert>
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p class="text-xs text-blue-800">
+            <strong>Local Development:</strong> Default password is "defaultpassword"
+          </p>
+          <p class="text-xs text-blue-700 mt-1">
+            Set PWORD in .env file to change it
+          </p>
+        </div>
       </div>
     </div>
 
@@ -180,9 +189,12 @@ const login = async () => {
 const logout = () => {
   setAuthToken(null);
   isAuthenticated.value = false;
-  // Check if we should return to public view
+  // Check if we should return to public view  
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('view') === 'public') {
+  const isPublicParam = urlParams.get('view') === 'public';
+  const isPublicPath = window.location.pathname === '/public' || window.location.pathname.endsWith('/public');
+  
+  if (isPublicParam || isPublicPath) {
     isPublicView.value = true;
   }
   password.value = '';
@@ -190,7 +202,7 @@ const logout = () => {
 };
 
 const copyPublicLink = async () => {
-  const publicUrl = `${window.location.origin}${window.location.pathname}?view=public`
+  const publicUrl = `${window.location.origin}/public`
   try {
     await navigator.clipboard.writeText(publicUrl)
     linkCopied.value = true
@@ -203,9 +215,12 @@ const copyPublicLink = async () => {
 };
 
 onMounted(() => {
-  // Check if this is a public view request
+  // Check if this is a public view request (both ?view=public and /public path)
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('view') === 'public') {
+  const isPublicParam = urlParams.get('view') === 'public';
+  const isPublicPath = window.location.pathname === '/public' || window.location.pathname.endsWith('/public');
+  
+  if (isPublicParam || isPublicPath) {
     isPublicView.value = true;
     return; // Skip authentication check
   }
