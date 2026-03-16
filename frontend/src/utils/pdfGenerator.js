@@ -21,19 +21,41 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   // Color palette - professional medical colors
   const colors = {
     primary: [41, 128, 185],      // Blue
+    secondary: [52, 152, 219],    // Light blue
     success: [46, 204, 113],      // Green
     warning: [241, 196, 15],      // Yellow
     danger: [231, 76, 60],        // Red
     dark: [44, 62, 80],           // Dark blue-gray
     light: [236, 240, 241],       // Light gray
     white: [255, 255, 255],
+    border: [189, 195, 199],      // Border gray
+  }
+  
+  // Helper function to add section header with decorative bar
+  const addSectionHeader = (title, yPosition) => {
+    // Left accent bar
+    doc.setFillColor(...colors.primary)
+    doc.rect(margin - 5, yPosition - 4, 3, 8, 'F')
+    
+    // Section title
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.dark)
+    doc.text(title, margin + 5, yPosition)
+    
+    // Underline
+    doc.setDrawColor(...colors.border)
+    doc.setLineWidth(0.5)
+    doc.line(margin + 5, yPosition + 2, pageWidth - margin, yPosition + 2)
+    
+    return yPosition + 10
   }
   
   // Add a subtle background color to the page
   doc.setFillColor(...colors.light)
   doc.rect(0, 0, pageWidth, 40, 'F')
   
-  // Header with colored bar
+  // Header with colored bar and gradient effect
   doc.setFillColor(...colors.primary)
   doc.rect(0, 0, pageWidth, 8, 'F')
   
@@ -51,9 +73,11 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   
   yPos += 15
   
-  // Patient Information Section with colored background
+  // Patient Information Section with colored background and border
+  doc.setDrawColor(...colors.border)
+  doc.setLineWidth(0.5)
   doc.setFillColor(...colors.light)
-  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 30, 3, 3, 'F')
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 30, 3, 3, 'FD')
   
   yPos += 8
   doc.setFontSize(14)
@@ -72,14 +96,52 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   doc.text(`Report Period: ${dateRange}`, margin + 5, yPos)
   yPos += 6
   doc.text(`Total Readings: ${entries.length}`, margin + 5, yPos)
-  yPos += 12
+  yPos += 16
   
-  // Summary Statistics with visual enhancement
-  doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...colors.dark)
-  doc.text('Summary Statistics', margin, yPos)
-  yPos += 8
+  // Quick Summary Box - At-a-Glance Highlights
+  if (stats.avgSystolic && stats.avgDiastolic) {
+    doc.setDrawColor(...colors.primary)
+    doc.setLineWidth(1)
+    doc.setFillColor(250, 252, 255) // Very light blue
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 24, 3, 3, 'FD')
+    
+    yPos += 8
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('Quick Summary', margin + 5, yPos)
+    
+    yPos += 8
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60, 60, 60)
+    
+    // Average BP
+    const avgBP = `Average: ${stats.avgSystolic}/${stats.avgDiastolic} mmHg`
+    doc.text(avgBP, margin + 5, yPos)
+    
+    // BP Status indicator
+    const bpStatus = stats.avgSystolic < 120 && stats.avgDiastolic < 80 ? 'Normal' :
+                     stats.avgSystolic < 130 && stats.avgDiastolic < 80 ? 'Elevated' :
+                     stats.avgSystolic < 140 || stats.avgDiastolic < 90 ? 'Stage 1' : 'Stage 2'
+    const statusColor = bpStatus === 'Normal' ? colors.success :
+                       bpStatus === 'Elevated' ? colors.warning : colors.danger
+    doc.setTextColor(...statusColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`  •  Status: ${bpStatus}`, margin + 60, yPos)
+    
+    // Pulse if available
+    if (stats.avgPulse) {
+      doc.setTextColor(60, 60, 60)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`  •  Pulse: ${stats.avgPulse} bpm`, margin + 115, yPos)
+    }
+    
+    yPos += 14
+  }
+  
+  // Summary Statistics with section header
+  yPos = addSectionHeader('Summary Statistics', yPos)
   
   const summaryData = [
     ['Metric', 'Average', 'Minimum', 'Maximum'],
@@ -130,15 +192,11 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     margin: { left: margin, right: margin },
   })
   
-  yPos = doc.lastAutoTable.finalY + 12
+  yPos = doc.lastAutoTable.finalY + 14
   
   // BP Category Distribution
   if (stats.categories) {
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.dark)
-    doc.text('Blood Pressure Categories', margin, yPos)
-    yPos += 8
+    yPos = addSectionHeader('Blood Pressure Categories', yPos)
     
     const categoryData = [
       ['Category', 'Range', 'Count', 'Percentage'],
@@ -206,7 +264,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       margin: { left: margin, right: margin },
     })
     
-    yPos = doc.lastAutoTable.finalY + 12
+    yPos = doc.lastAutoTable.finalY + 14
   }
   
   // Check if we need a new page
@@ -217,11 +275,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   
   // Time of Day Analysis
   if (stats.timeOfDay && stats.timeOfDay.length > 0) {
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.dark)
-    doc.text('Time of Day Analysis', margin, yPos)
-    yPos += 8
+    yPos = addSectionHeader('Time of Day Analysis', yPos)
     
     const timeData = [
       ['Period', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
@@ -260,7 +314,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       margin: { left: margin, right: margin },
     })
     
-    yPos = doc.lastAutoTable.finalY + 12
+    yPos = doc.lastAutoTable.finalY + 14
   }
   
   // Check if we need a new page
@@ -271,11 +325,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   
   // Day of Week Pattern
   if (stats.dayOfWeek && stats.dayOfWeek.length > 0) {
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.dark)
-    doc.text('Day of Week Pattern', margin, yPos)
-    yPos += 8
+    yPos = addSectionHeader('Day of Week Pattern', yPos)
     
     const dayData = [
       ['Day', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
@@ -314,7 +364,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       margin: { left: margin, right: margin },
     })
     
-    yPos = doc.lastAutoTable.finalY + 12
+    yPos = doc.lastAutoTable.finalY + 14
   }
   
   // Check if we need a new page
@@ -325,11 +375,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   
   // Trend Analysis
   if (stats.trends) {
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.dark)
-    doc.text('30-Day Trend Analysis', margin, yPos)
-    yPos += 8
+    yPos = addSectionHeader('30-Day Trend Analysis', yPos)
     
     const trendData = [
       ['Period', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
@@ -391,7 +437,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setTextColor(...trendColor)
     doc.text(trendText, margin, yPos)
     doc.setTextColor(...colors.dark)
-    yPos += 12
+    yPos += 14
   }
   
   // Monthly Comparison
@@ -402,11 +448,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       yPos = 20
     }
     
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.dark)
-    doc.text('Monthly Comparison', margin, yPos)
-    yPos += 8
+    yPos = addSectionHeader('Monthly Comparison', yPos)
     
     const monthlyData = [
       ['Period', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
@@ -467,7 +509,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setTextColor(...monthlyTrendColor)
     doc.text(monthlyTrendText, margin, yPos)
     doc.setTextColor(...colors.dark)
-    yPos += 12
+    yPos += 14
   }
   
   // Recent Readings Table (last 20 entries)
@@ -478,11 +520,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       yPos = 20
     }
     
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.dark)
-    doc.text('Recent Readings', margin, yPos)
-    yPos += 8
+    yPos = addSectionHeader('Recent Readings', yPos)
     
     const recentEntries = entries.slice(0, 20)
     const readingsData = [
@@ -529,6 +567,25 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     yPos = doc.lastAutoTable.finalY + 12
   }
   
+  // Add medical disclaimer/notes at the end if space permits
+  if (yPos < pageHeight - 50) {
+    yPos += 10
+    doc.setDrawColor(...colors.border)
+    doc.setLineWidth(0.3)
+    doc.line(margin, yPos, pageWidth - margin, yPos)
+    yPos += 8
+    
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Medical Disclaimer:', margin, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'normal')
+    const disclaimerText = 'This report is for informational purposes only and should not replace professional medical advice. Please consult with your healthcare provider for proper diagnosis and treatment.'
+    const splitText = doc.splitTextToSize(disclaimerText, pageWidth - 2 * margin)
+    doc.text(splitText, margin, yPos)
+  }
+  
   // Footer on all pages with professional styling
   const pageCount = doc.internal.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
@@ -561,7 +618,10 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     )
   }
   
-  // Save the PDF with timestamp
-  const filename = `BP_Report_${new Date().toISOString().split('T')[0]}.pdf`
+  // Save the PDF with descriptive filename
+  const dateStr = new Date().toISOString().split('T')[0]
+  const periodStr = dateRange.replace(/\s+/g, '_').replace(/[()]/g, '')
+  const readingsCount = entries.length
+  const filename = `BP_Report_${dateStr}_${periodStr}_${readingsCount}readings.pdf`
   doc.save(filename)
 }
