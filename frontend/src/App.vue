@@ -1,14 +1,14 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Public View (no authentication required) -->
-    <div v-if="isPublicView">
+    <div v-if="isPublicRoute">
       <header class="bg-white shadow">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 class="text-2xl font-bold text-gray-800">BP Monitor - Public View</h1>
           <div class="text-sm text-gray-600">Read-only view</div>
         </div>
       </header>
-      <PublicViewTab />
+      <router-view />
     </div>
 
     <!-- Login Modal -->
@@ -55,7 +55,7 @@
           <h1 class="text-2xl font-bold text-gray-800">BP Monitor</h1>
           <div class="flex gap-2">
             <BaseButton 
-              v-if="activeTab === 'public'" 
+              v-if="currentRoute === '/public-view'" 
               variant="success" 
               @click="copyPublicLink"
             >
@@ -72,93 +72,75 @@
       <div class="flex gap-2 bg-white border-b sticky top-0 z-10">
         <BaseButton
           variant="tab"
-          :active="activeTab === 'log'"
-          @click="activeTab = 'log'"
+          :active="currentRoute === '/log'"
+          @click="$router.push('/log')"
         >
           📝 Log BP
         </BaseButton>
         <BaseButton
           variant="tab"
-          :active="activeTab === 'charts'"
-          @click="activeTab = 'charts'"
+          :active="currentRoute === '/charts'"
+          @click="$router.push('/charts')"
         >
           📊 Charts
         </BaseButton>
         <BaseButton
           variant="tab"
-          :active="activeTab === 'analytics'"
-          @click="activeTab = 'analytics'"
+          :active="currentRoute === '/analytics'"
+          @click="$router.push('/analytics')"
         >
           📈 Analytics
         </BaseButton>
         <BaseButton
           variant="tab"
-          :active="activeTab === 'import'"
-          @click="activeTab = 'import'"
+          :active="currentRoute === '/import'"
+          @click="$router.push('/import')"
         >
           📥 Import
         </BaseButton>
         <BaseButton
           variant="tab"
-          :active="activeTab === 'public'"
-          @click="activeTab = 'public'"
+          :active="currentRoute === '/public-view'"
+          @click="$router.push('/public-view')"
         >
           🔗 Public View
         </BaseButton>
       </div>
       
       <!-- Tab Content -->
-      <LogBPTab 
-        v-if="activeTab === 'log'"
-        @entry-created="refreshCharts"
-      />
-      <ChartsTab 
-        v-if="activeTab === 'charts'"
-        :key="chartsRefreshKey"
-      />
-      <AnalyticsTab 
-        v-if="activeTab === 'analytics'"
-      />
-      <ImportTab 
-        v-if="activeTab === 'import'"
-        @import-complete="onImportComplete"
-      />
-      <PublicViewTab 
-        v-if="activeTab === 'public'"
-      />
+      <router-view @entry-created="onEntryCreated" @import-complete="onImportComplete" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import LogBPTab from './components/LogBPTab.vue';
-import ChartsTab from './components/ChartsTab.vue';
-import ImportTab from './components/ImportTab.vue';
-import PublicViewTab from './components/PublicViewTab.vue';
-import AnalyticsTab from './components/AnalyticsTab.vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { authenticate, setAuthToken } from './services/api';
 
-const activeTab = ref('log');
-const chartsRefreshKey = ref(0);
+const router = useRouter();
+const route = useRoute();
+
 const isAuthenticated = ref(false);
 const isLoggingIn = ref(false);
 const password = ref('');
 const loginError = ref('');
-const isPublicView = ref(false);
 const linkCopied = ref(false);
 
-const refreshCharts = () => {
-  chartsRefreshKey.value += 1;
+const currentRoute = computed(() => route.path);
+const isPublicRoute = computed(() => route.path === '/public');
+
+const onEntryCreated = () => {
+  // Navigate to charts after entry is created
   setTimeout(() => {
-    activeTab.value = 'charts';
+    router.push('/charts');
   }, 500);
 };
 
 const onImportComplete = () => {
-  chartsRefreshKey.value += 1;
+  // Navigate to charts after import
   setTimeout(() => {
-    activeTab.value = 'charts';
+    router.push('/charts');
   }, 500);
 };
 
@@ -172,6 +154,8 @@ const login = async () => {
       setAuthToken(response.data.token);
       isAuthenticated.value = true;
       password.value = '';
+      // Navigate to log page after login
+      router.push('/log');
     }
   } catch (error) {
     if (error.response?.status === 403) {
@@ -189,16 +173,13 @@ const login = async () => {
 const logout = () => {
   setAuthToken(null);
   isAuthenticated.value = false;
-  // Check if we should return to public view  
-  const urlParams = new URLSearchParams(window.location.search);
-  const isPublicParam = urlParams.get('view') === 'public';
-  const isPublicPath = window.location.pathname === '/public' || window.location.pathname.endsWith('/public');
-  
-  if (isPublicParam || isPublicPath) {
-    isPublicView.value = true;
-  }
   password.value = '';
   loginError.value = '';
+  
+  // If on public route, stay there; otherwise go to home
+  if (route.path !== '/public') {
+    router.push('/');
+  }
 };
 
 const copyPublicLink = async () => {
@@ -214,21 +195,32 @@ const copyPublicLink = async () => {
   }
 };
 
-onMounted(() => {
-  // Check if this is a public view request (both ?view=public and /public path)
-  const urlParams = new URLSearchParams(window.location.search);
-  const isPublicParam = urlParams.get('view') === 'public';
-  const isPublicPath = window.location.pathname === '/public' || window.location.pathname.endsWith('/public');
-  
-  if (isPublicParam || isPublicPath) {
-    isPublicView.value = true;
-    return; // Skip authentication check
+// Watch for route changes to handle authentication
+watch(() => route.path, (newPath) => {
+  // Public route doesn't need authentication
+  if (newPath === '/public') {
+    return;
   }
   
-  // Otherwise check for saved authentication
+  // For other routes, check if authenticated
   const savedToken = localStorage.getItem('authToken');
   if (savedToken) {
     isAuthenticated.value = true;
+  } else {
+    isAuthenticated.value = false;
+  }
+});
+
+onMounted(() => {
+  // Check authentication status
+  const savedToken = localStorage.getItem('authToken');
+  if (savedToken) {
+    isAuthenticated.value = true;
+  }
+  
+  // If not on public route and not authenticated, show login
+  if (route.path !== '/public' && !savedToken) {
+    isAuthenticated.value = false;
   }
 });
 </script>
