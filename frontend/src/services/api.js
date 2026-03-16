@@ -48,7 +48,11 @@ export const deleteEntry = (id) => {
 }
 
 export const exportCSV = () => {
-  return api.get('/entries/export/csv/', { responseType: 'blob' })
+  return api.get('/entries/export/', { responseType: 'blob' })
+}
+
+export const importData = (entries, mode = 'merge') => {
+  return api.post('/entries/import/', { entries, mode })
 }
 
 export default api

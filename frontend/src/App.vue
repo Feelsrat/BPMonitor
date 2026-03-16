@@ -67,6 +67,17 @@
         >
           📊 Charts
         </button>
+        <button
+          @click="activeTab = 'import'"
+          :class="[
+            'px-4 py-3 font-semibold whitespace-nowrap',
+            activeTab === 'import'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-800'
+          ]"
+        >
+          📥 Import
+        </button>
       </div>
       
       <!-- Tab Content -->
@@ -78,6 +89,10 @@
         v-if="activeTab === 'charts'"
         :key="chartsRefreshKey"
       />
+      <ImportTab 
+        v-if="activeTab === 'import'"
+        @import-complete="onImportComplete"
+      />
     </div>
   </div>
 </template>
@@ -86,6 +101,7 @@
 import { ref, onMounted } from 'vue'
 import LogBPTab from './components/LogBPTab.vue'
 import ChartsTab from './components/ChartsTab.vue'
+import ImportTab from './components/ImportTab.vue'
 import { authenticate, setAuthToken } from './services/api'
 
 export default {
@@ -93,6 +109,7 @@ export default {
   components: {
     LogBPTab,
     ChartsTab,
+    ImportTab,
   },
   setup() {
     const activeTab = ref('log')
@@ -103,6 +120,14 @@ export default {
     const loginError = ref('')
     
     const refreshCharts = () => {
+      chartsRefreshKey.value += 1
+      setTimeout(() => {
+        activeTab.value = 'charts'
+      }, 500)
+    }
+    
+    const onImportComplete = () => {
+      // Refresh charts after successful import and switch to charts tab
       chartsRefreshKey.value += 1
       setTimeout(() => {
         activeTab.value = 'charts'
@@ -152,6 +177,7 @@ export default {
       activeTab,
       chartsRefreshKey,
       refreshCharts,
+      onImportComplete,
       isAuthenticated,
       isLoggingIn,
       password,

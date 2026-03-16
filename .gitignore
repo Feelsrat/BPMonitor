@@ -3,13 +3,17 @@
 .env.local
 .env.*.local
 
-# Fly.io configuration (sensitive)
+# Vercel
+.vercel/
+
+# Fly.io configuration (legacy)
 fly.toml
 
 # Dependencies
 node_modules/
 backend/node_modules/
 frontend/node_modules/
+api/node_modules/
 
 # Build outputs
 backend/dist/
@@ -33,3 +37,6 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Local data (if any)
+bp-data.json

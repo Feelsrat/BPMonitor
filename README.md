@@ -1,255 +1,163 @@
 # BP Monitor - Blood Pressure Tracking Web App
 
-A secure, single-user blood pressure tracking web application built with Vue 3 (frontend) and Django (backend), designed to run on Fly.io.
+A secure, single-user blood pressure tracking web application built with Vue 3 (frontend) and Vercel Functions (backend), designed to run on Vercel with Vercel KV storage.
+
+> 🚀 **Quick Start**: See [QUICKSTART.md](./QUICKSTART.md) for a 2-minute setup guide!
 
 ## Features
 
-- 🔐 **Secure JWT-based authentication** - Password stored only as environment variable
+- 🔐 **Secure JWT-based authentication** - Password protected login
 - 📊 **Interactive charts with BP reference zones** - Visual indicators for normal/elevated/high BP
 - 📱 **Mobile-responsive design** - Works perfectly on phones, tablets, and desktops
-- 📥 **CSV export** - Download all your health data
-- 📈 **Statistics dashboard** - 7-day averages and trends
-- ✅ **Cost-effective** - Runs on single Fly.io machine (shared CPU)
+- 📥 **CSV/JSON export & import** - Download and restore your health data
+- 📈 **Statistics dashboard** - Track trends and patterns
+- 🚀 **Serverless deployment** - Scales automatically, pay only for what you use
 
 ## Tech Stack
 
 - **Frontend**: Vue 3 + Vite + Tailwind CSS + Chart.js
-- **Backend**: Django + Django REST Framework + PostgreSQL
-- **Deployment**: Docker + Fly.io
-- **Auth**: JWT tokens (djangorestframework-simplejwt)
+- **Backend**: Vercel Functions (Node.js) + Vercel KV (Redis)
+- **Deployment**: Vercel + GitHub
+- **Auth**: JWT tokens
 
-## Local Development Setup
+## Quick Start
 
-### Prerequisites
+### Local Development
 
-- Python 3.11+
-- Node.js 18+ (for frontend development)
-- uv (Python package manager) - install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- PostgreSQL (local database for development)
-
-### Backend Setup
-
-```bash
-# Navigate to backend directory
-cd backend
-
-# Create a .env file from the example
-cp ../.env.example .env
-
-# Edit .env with local settings (at minimum set BPAPP_PASSWORD)
-# For local dev, you can set:
-# - BPAPP_PASSWORD=dev-password
-# - DATABASE_URL or DB_* variables pointing to your local PostgreSQL
-# - DEBUG=true
-
-# Install dependencies with uv
-uv sync
-
-# Run migrations
-uv run python manage.py migrate
-
-# Create a superuser (optional, for admin panel)
-uv run python manage.py createsuperuser
-
-# Run development server
-uv run python manage.py runserver 0.0.0.0:8000
-```
-
-The backend will be available at `http://localhost:8000` and the API at `http://localhost:8000/api/`
-
-### Frontend Setup
-
-```bash
-# In a new terminal, navigate to frontend directory
-cd frontend
-
-# Install dependencies
-npm ci
-
-# Run development server
-npm run dev
-```
-
-The frontend will be available at `http://localhost:5173`
-
-### Testing Locally
-
-1. Open your browser to `http://localhost:5173`
-2. The frontend is configured to proxy API calls to `http://localhost:8000`
-3. Login with the password you set in `.env` (e.g., `dev-password`)
-4. Add some blood pressure entries
-5. View charts and export data
-
-## Deployment to Fly.io
-
-### Prerequisites
-
-- Fly.io account (sign up at https://fly.io)
-- Fly CLI installed: `curl -L https://fly.io/install.sh | sh`
-- Docker installed (for building locally) or rely on Fly.io's builder
-
-### Step-by-Step Deployment
-
-1. **Install and authenticate with Fly.io**:
+1. **Install dependencies**
    ```bash
-   flyctl auth login
+   npm run install:all
    ```
 
-2. **Create a Fly.io app** (first time only):
+2. **Set environment variables**
    ```bash
-   flyctl launch --no-deploy
-   ```
-   - App name: Choose `bpmonitor` or similar
-   - Region: Choose closest to you (default is fine)
-   - PostgreSQL: When asked, choose "Yes, create a PostgreSQL database"
-
-3. **Set environment secrets**:
-   ```bash
-   # Generate strong random values
-   BPAPP_PASSWORD=$(openssl rand -base64 32)
-   SECRET_KEY=$(openssl rand -base64 64)
+   # Copy template
+   cp .env.example .env
    
-   # Set them in Fly.io
-   flyctl secrets set BPAPP_PASSWORD="$BPAPP_PASSWORD"
-   flyctl secrets set SECRET_KEY="$SECRET_KEY"
+   # Edit .env with your password and JWT secret
+   ```
+
+3. **Run development server**
+   ```bash
+   npm run dev
+   ```
    
-   # Save these somewhere safe if you need to login again
-   echo "PASSWORD: $BPAPP_PASSWORD"
-   echo "SECRET_KEY: $SECRET_KEY"
-   ```
+   This starts both:
+   - Frontend: http://localhost:5173/
+   - API: http://localhost:3001/api/
 
-4. **Update fly.toml** (if needed):
-   - The included `fly.toml` is pre-configured for single machine
-   - Ensure `machines.count = 1` for cost savings
-   - Set your app name in the `app` field
+### Deploy to Vercel
 
-5. **Deploy**:
+1. **Push to GitHub**
    ```bash
-   flyctl deploy
+   git push origin main
    ```
 
-6. **Run migrations** (first time or after schema changes):
+2. **Deploy with Vercel**
    ```bash
-   flyctl ssh console -c "uv run python manage.py migrate"
+   vercel --prod
    ```
 
-7. **Get your app URL**:
+3. **Link Vercel KV** (one-time setup)
    ```bash
-   flyctl info
+   vercel env link KV
    ```
-   Your app is now live at `https://your-app-name.fly.dev`
 
-### After Deployment
+See [VERCEL_SETUP.md](./VERCEL_SETUP.md) for detailed deployment instructions.
 
-- Update `CORS_ALLOWED_ORIGINS` if needed: `flyctl secrets set CORS_ALLOWED_ORIGINS="https://your-app-name.fly.dev"`
-- Login to your live app with the password you set
-- Add blood pressure entries and verify charts work
+## Directory Structure
 
-## Data Persistence
-
-Your blood pressure data is stored in PostgreSQL on Fly.io:
-
-- **Persistent**: Data survives app restarts and redeployments
-- **Managed**: Fly.io handles backups and maintenance
-- **Secure**: Database is only accessible from your app
-
-### Backing Up Data
-
-To download all your data as CSV:
-
-1. Login to your app
-2. Navigate to the "Charts" tab
-3. Click "📥 Export CSV"
-4. Your data will download as `bp_export_YYYY-MM-DD.csv`
-
-### Manual Database Backup
-
-```bash
-# Connect to database
-flyctl postgres connect -a your-app-name-db
-
-# Then run PostgreSQL backup commands as needed
+```
+BPMonitor/
+├── frontend/               # Vue 3 + Vite frontend
+│   ├── src/
+│   │   ├── components/    # Vue components
+│   │   ├── services/      # API client
+│   │   └── App.vue
+│   ├── package.json
+│   └── vite.config.js
+├── api/                    # Vercel Functions (serverless backend)
+│   ├── lib/               # Utilities (auth, KV storage)
+│   ├── auth.js            # Auth endpoint
+│   ├── health.js          # Health check
+│   ├── entries.js         # BP entries CRUD
+│   └── entries/           # Entry-specific endpoints
+├── dev-server.js          # Local development server
+├── .env                   # Environment variables (local dev)
+├── .env.example           # Environment template
+├── package.json           # Root package configuration
+└── vercel.json            # Vercel configuration
 ```
 
-## Security Notes
+## API Endpoints
 
-- ⚠️ **Never commit `.env` to git** - Fly.io secrets are stored separately
-- ⚠️ **BPAPP_PASSWORD is for this app only** - Don't reuse passwords from other services
-- ⚠️ **JWT tokens expire in 24 hours** - You'll need to login again after that
-- ⚠️ **CORS is locked to your domain** - No unauthorized access from other domains
-- ✅ **All data transmitted over HTTPS** on Fly.io (auto-configured)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/` | Login (get JWT token) |
+| GET | `/api/entries/` | Get all BP entries |
+| POST | `/api/entries/` | Create new entry |
+| PATCH | `/api/entries/:id/` | Update entry |
+| DELETE | `/api/entries/:id/` | Delete entry |
+| GET | `/api/entries/export/` | Export as CSV |
+| POST | `/api/entries/import/` | Import CSV/JSON |
+
+## Data Backup & Migration
+
+### Export Your Data
+1. Open the app and go to **Import** tab
+2. Click export button to download CSV
+3. Save file to your computer
+
+### Import Data
+1. Go to **Import** tab
+2. Select your backup CSV or JSON file
+3. Choose **Merge** (add to existing) or **Replace** (overwrite all)
+4. Click Import
+
+## Environment Variables
+
+### Root .env file
+```
+PWORD=your_secure_password
+JWT_SECRET=your_jwt_secret
+NODE_ENV=development
+```
+
+### Vercel Deployment
+- Set `PWORD` and `JWT_SECRET` in Vercel project settings
+- Vercel KV connection details are auto-configured
 
 ## Troubleshooting
 
-### Local Dev Issues
+### Can't connect to API locally
+```bash
+# Make sure Vercel dev server is running
+npm run dev
 
-**"ModuleNotFoundError: No module named 'django'"**
-- Make sure you ran `uv sync` in the `backend/` directory
+# Check that API routes are accessible
+curl http://localhost:3000/api/health/
+```
 
-**"Connection refused" from frontend to backend**
-- Ensure Docker isn't interfering; check ports 8000 and 5173 are free
-- Verify the proxy in `vite.config.js` points to the backend
+### Lost data / Need to restore backup
+1. Make sure you have the backup CSV file
+2. Go to Import tab
+3. Select the file and choose "Replace" mode (⚠️ this will overwrite current data)
+4. Click Import
 
-**PostgreSQL connection errors**
-- Ensure PostgreSQL is running: `brew services start postgresql` (macOS)
-- Check your DB_* settings in `.env`
-- Reset DB: `dropdb bpmonitor && createdb bpmonitor` (will clear all data)
+### Login issues
+- Make sure password matches the `PWORD` environment variable
+- Tokens expire after 7 days - log out and back in if token is stale
+- Check browser DevTools → Application → Storage → localStorage
 
-### Fly.io Deployment Issues
+## Security Notes
 
-**"Error: Build failed"**
-- Check build logs: `flyctl logs --instance=current`
-- Ensure Docker build succeeds locally: `docker build -t bpmonitor .`
-
-**"Database connection timeout"**
-- Ensure PostgreSQL addon was created during `flyctl launch`
-- Check addon status: `flyctl postgres list`
-- Verify database is running: `flyctl postgres status`
-
-**"LoginTab shows 401 Unauthorized"**
-- Verify `BPAPP_PASSWORD` secret is set: `flyctl secrets list`
-- Check you're using the correct password
-- Remember to set secrets before deploying
-
-**"Charts don't show data"**
-- Make sure migrations ran: `flyctl ssh console -c "uv run python manage.py migrate"`
-- Check recent logs: `flyctl logs`
-
-## Development Notes
-
-### Adding New Fields to Blood Pressure Entries
-
-1. Edit `backend/tracker/models.py` - add field to `BPEntry`
-2. Create and run migrations:
-   ```bash
-   cd backend
-   uv run python manage.py makemigrations
-   uv run python manage.py migrate
-   ```
-3. Update `backend/tracker/serializers.py` if needed
-4. Update frontend components in `frontend/src/components/`
-
-### Customizing Chart Colors
-
-Edit `frontend/src/components/ChartsTab.vue` - look for `borderColor` and `backgroundColor` in the `datasets` array.
-
-### Adjusting BP Reference Zones
-
-To change what counts as "normal" vs "elevated" vs "high":
-- Edit the legend in `ChartsTab.vue` (currently: <120/<80 normal, 120-139/80-89 elevated, ≥140/≥90 high)
-- This is educational information; consult with a healthcare provider for personalized recommendations
+- ✅ All API routes (except `/auth` and `/health`) require valid JWT
+- ✅ Password never sent to backend (only used to verify login)
+- ✅ JWT tokens stored securely in localStorage
+- ✅ Data stored in Vercel KV (managed encryption)
+- ⚠️ Single password for all users (single-user app)
+- ⚠️ Change password in environment variables to invalidate old tokens
 
 ## License
 
-Personal use only. Built for tracking your own health. ❤️
-
----
-
-## Support & Questions
-
-If you run into issues:
-
-1. Check the troubleshooting section above
-2. Review Fly.io docs: https://fly.io/docs
-3. Django REST Framework docs: https://www.django-rest-framework.org
-4. Vue 3 docs: https://vuejs.org
+MIT
