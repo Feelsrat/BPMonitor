@@ -97,94 +97,69 @@
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
-import LogBPTab from './components/LogBPTab.vue'
-import ChartsTab from './components/ChartsTab.vue'
-import ImportTab from './components/ImportTab.vue'
-import { authenticate, setAuthToken } from './services/api'
+<script setup>
+import { ref, onMounted } from 'vue';
+import LogBPTab from './components/LogBPTab.vue';
+import ChartsTab from './components/ChartsTab.vue';
+import ImportTab from './components/ImportTab.vue';
+import { authenticate, setAuthToken } from './services/api';
 
-export default {
-  name: 'App',
-  components: {
-    LogBPTab,
-    ChartsTab,
-    ImportTab,
-  },
-  setup() {
-    const activeTab = ref('log')
-    const chartsRefreshKey = ref(0)
-    const isAuthenticated = ref(false)
-    const isLoggingIn = ref(false)
-    const password = ref('')
-    const loginError = ref('')
-    
-    const refreshCharts = () => {
-      chartsRefreshKey.value += 1
-      setTimeout(() => {
-        activeTab.value = 'charts'
-      }, 500)
+const activeTab = ref('log');
+const chartsRefreshKey = ref(0);
+const isAuthenticated = ref(false);
+const isLoggingIn = ref(false);
+const password = ref('');
+const loginError = ref('');
+
+const refreshCharts = () => {
+  chartsRefreshKey.value += 1;
+  setTimeout(() => {
+    activeTab.value = 'charts';
+  }, 500);
+};
+
+const onImportComplete = () => {
+  chartsRefreshKey.value += 1;
+  setTimeout(() => {
+    activeTab.value = 'charts';
+  }, 500);
+};
+
+const login = async () => {
+  isLoggingIn.value = true;
+  loginError.value = '';
+  
+  try {
+    const response = await authenticate(password.value);
+    if (response.data.success && response.data.token) {
+      setAuthToken(response.data.token);
+      isAuthenticated.value = true;
+      password.value = '';
     }
-    
-    const onImportComplete = () => {
-      // Refresh charts after successful import and switch to charts tab
-      chartsRefreshKey.value += 1
-      setTimeout(() => {
-        activeTab.value = 'charts'
-      }, 500)
+  } catch (error) {
+    if (error.response?.status === 403) {
+      loginError.value = 'Access denied.';
+    } else if (error.response?.status === 401) {
+      loginError.value = 'Invalid password';
+    } else {
+      loginError.value = 'Login failed. Please try again.';
     }
-    
-    const login = async () => {
-      isLoggingIn.value = true
-      loginError.value = ''
-      
-      try {
-        const response = await authenticate(password.value)
-        if (response.data.success && response.data.token) {
-          setAuthToken(response.data.token)
-          isAuthenticated.value = true
-          password.value = ''
-        }
-      } catch (error) {
-        if (error.response?.status === 403) {
-          loginError.value = 'Access denied.'
-        } else if (error.response?.status === 401) {
-          loginError.value = 'Invalid password'
-        } else {
-          loginError.value = 'Login failed. Please try again.'
-        }
-      } finally {
-        isLoggingIn.value = false
-      }
-    }
-    
-    const logout = () => {
-      setAuthToken(null)
-      isAuthenticated.value = false
-      password.value = ''
-      loginError.value = ''
-    }
-    
-    onMounted(() => {
-      // Check if we have a saved token
-      const savedToken = localStorage.getItem('authToken')
-      if (savedToken) {
-        isAuthenticated.value = true
-      }
-    })
-    
-    return {
-      activeTab,
-      chartsRefreshKey,
-      refreshCharts,
-      onImportComplete,
-      isAuthenticated,
-      isLoggingIn,
-      password,
-      loginError,
-      login,
-      logout,
-    }
-  },
-}
+  } finally {
+    isLoggingIn.value = false;
+  }
+};
+
+const logout = () => {
+  setAuthToken(null);
+  isAuthenticated.value = false;
+  password.value = '';
+  loginError.value = '';
+};
+
+onMounted(() => {
+  const savedToken = localStorage.getItem('authToken');
+  if (savedToken) {
+    isAuthenticated.value = true;
+  }
+});
 </script>
