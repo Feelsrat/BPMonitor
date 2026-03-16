@@ -78,7 +78,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...colors.dark)
-  doc.text('📊 Summary Statistics', margin, yPos)
+  doc.text('Summary Statistics', margin, yPos)
   yPos += 8
   
   const summaryData = [
@@ -137,7 +137,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.dark)
-    doc.text('❤️ Blood Pressure Categories', margin, yPos)
+    doc.text('Blood Pressure Categories', margin, yPos)
     yPos += 8
     
     const categoryData = [
@@ -220,7 +220,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.dark)
-    doc.text('🕐 Time of Day Analysis', margin, yPos)
+    doc.text('Time of Day Analysis', margin, yPos)
     yPos += 8
     
     const timeData = [
@@ -274,7 +274,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.dark)
-    doc.text('📅 Day of Week Pattern', margin, yPos)
+    doc.text('Day of Week Pattern', margin, yPos)
     yPos += 8
     
     const dayData = [
@@ -328,7 +328,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.dark)
-    doc.text('📈 30-Day Trend Analysis', margin, yPos)
+    doc.text('30-Day Trend Analysis', margin, yPos)
     yPos += 8
     
     const trendData = [
@@ -405,7 +405,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.dark)
-    doc.text('📊 Monthly Comparison', margin, yPos)
+    doc.text('Monthly Comparison', margin, yPos)
     yPos += 8
     
     const monthlyData = [
@@ -481,7 +481,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.dark)
-    doc.text('📋 Recent Readings', margin, yPos)
+    doc.text('Recent Readings', margin, yPos)
     yPos += 8
     
     const recentEntries = entries.slice(0, 20)
