@@ -2,14 +2,23 @@
   <div class="p-4 md:p-8 max-w-6xl mx-auto">
     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">📈 Enhanced Analytics</h2>
     
-    <BaseButton
-      variant="primary"
-      :loading="loading"
-      @click="loadEntries"
-      class="mb-6"
-    >
-      {{ loading ? 'Loading...' : '🔄 Refresh Data' }}
-    </BaseButton>
+    <div class="flex flex-wrap gap-3 mb-6">
+      <BaseButton
+        variant="primary"
+        :loading="loading"
+        @click="loadEntries"
+      >
+        {{ loading ? 'Loading...' : '🔄 Refresh Data' }}
+      </BaseButton>
+      
+      <BaseButton
+        variant="success"
+        @click="exportPDF"
+        :disabled="entries.length === 0"
+      >
+        📄 Export PDF Report
+      </BaseButton>
+    </div>
     
     <div v-if="entries.length === 0" class="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
       No data available. Log some blood pressure entries to see analytics.
@@ -156,6 +165,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getEntries } from '../services/api'
+import { generateBPReport } from '../utils/pdfGenerator'
 
 const entries = ref([])
 const loading = ref(false)
@@ -395,6 +405,40 @@ const monthlyTrendClass = computed(() => {
   if (change > 5) return 'bg-red-50 text-red-700'
   return 'bg-gray-50 text-gray-700'
 })
+
+const exportPDF = () => {
+  // Calculate basic stats for the PDF
+  const avgSystolic = entries.value.length > 0 
+    ? Math.round(entries.value.reduce((sum, e) => sum + e.systolic, 0) / entries.value.length)
+    : 0
+  const avgDiastolic = entries.value.length > 0
+    ? Math.round(entries.value.reduce((sum, e) => sum + e.diastolic, 0) / entries.value.length)
+    : 0
+  const avgPulse = entries.value.length > 0
+    ? Math.round(entries.value.reduce((sum, e) => sum + e.pulse, 0) / entries.value.length)
+    : 0
+  
+  const systolicValues = entries.value.map(e => e.systolic)
+  const diastolicValues = entries.value.map(e => e.diastolic)
+  const pulseValues = entries.value.map(e => e.pulse)
+  
+  generateBPReport({
+    entries: entries.value,
+    stats: {
+      avgSystolic,
+      avgDiastolic,
+      avgPulse,
+      minSystolic: Math.min(...systolicValues),
+      maxSystolic: Math.max(...systolicValues),
+      minDiastolic: Math.min(...diastolicValues),
+      maxDiastolic: Math.max(...diastolicValues),
+      minPulse: Math.min(...pulseValues),
+      maxPulse: Math.max(...pulseValues),
+      ...stats.value,
+    },
+    dateRange: 'All Time',
+  })
+}
 
 onMounted(() => {
   loadEntries()

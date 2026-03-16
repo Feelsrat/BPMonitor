@@ -46,9 +46,19 @@
         </BaseButton>
       </div>
       
-      <p class="text-sm text-gray-600 mt-2">
-        Showing {{ filteredEntries.length }} of {{ entries.length }} entries
-      </p>
+      <div class="flex items-center justify-between mt-3">
+        <p class="text-sm text-gray-600">
+          Showing {{ filteredEntries.length }} of {{ entries.length }} entries
+        </p>
+        <BaseButton
+          variant="success"
+          @click="exportPDF"
+          :disabled="filteredEntries.length === 0"
+          class="text-sm"
+        >
+          📄 Export PDF
+        </BaseButton>
+      </div>
     </BaseCard>
     
     <div class="flex flex-col sm:flex-row gap-2 mb-6">
@@ -171,6 +181,7 @@ import {
   Filler,
 } from 'chart.js'
 import { getEntries, exportCSV } from '../services/api'
+import { generateBPReport } from '../utils/pdfGenerator'
 
 ChartJS.register(
   CategoryScale,
@@ -401,6 +412,44 @@ const handleExportCSV = async () => {
   } catch (err) {
     errorMessage.value = 'Failed to export CSV. Please try again.'
   }
+}
+
+const exportPDF = () => {
+  // Calculate stats for the PDF
+  const avgSystolic = filteredEntries.value.length > 0 
+    ? Math.round(filteredEntries.value.reduce((sum, e) => sum + e.systolic, 0) / filteredEntries.value.length)
+    : 0
+  const avgDiastolic = filteredEntries.value.length > 0
+    ? Math.round(filteredEntries.value.reduce((sum, e) => sum + e.diastolic, 0) / filteredEntries.value.length)
+    : 0
+  const avgPulse = filteredEntries.value.length > 0
+    ? Math.round(filteredEntries.value.reduce((sum, e) => sum + e.pulse, 0) / filteredEntries.value.length)
+    : 0
+  
+  const systolicValues = filteredEntries.value.map(e => e.systolic)
+  const diastolicValues = filteredEntries.value.map(e => e.diastolic)
+  const pulseValues = filteredEntries.value.map(e => e.pulse)
+  
+  // Get date range label
+  const filterLabel = dateFilters.find(f => f.value === selectedFilter.value)?.label || 'All Time'
+  const categoryLabel = selectedCategory.value === 'all' ? 'All Categories' : categories.find(c => c.value === selectedCategory.value)?.label || ''
+  const dateRangeText = categoryLabel !== 'All Categories' ? `${filterLabel} - ${categoryLabel}` : filterLabel
+  
+  generateBPReport({
+    entries: filteredEntries.value,
+    stats: {
+      avgSystolic,
+      avgDiastolic,
+      avgPulse,
+      minSystolic: Math.min(...systolicValues),
+      maxSystolic: Math.max(...systolicValues),
+      minDiastolic: Math.min(...diastolicValues),
+      maxDiastolic: Math.max(...diastolicValues),
+      minPulse: Math.min(...pulseValues),
+      maxPulse: Math.max(...pulseValues),
+    },
+    dateRange: dateRangeText,
+  })
 }
 
 onMounted(() => {
