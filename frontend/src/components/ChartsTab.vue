@@ -3,48 +3,47 @@
     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Charts & Analytics</h2>
     
     <!-- Date Range Filters -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <BaseCard padding="p-4" class="mb-6">
       <h3 class="text-sm font-semibold text-gray-700 mb-3">Time Range</h3>
       <div class="flex flex-wrap gap-2">
-        <button
+        <BaseButton
           v-for="filter in dateFilters"
           :key="filter.value"
+          variant="filter"
+          :active="selectedFilter === filter.value"
           @click="selectedFilter = filter.value"
-          :class="[
-            'px-4 py-2 rounded-lg font-semibold transition',
-            selectedFilter === filter.value
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          ]"
         >
           {{ filter.label }}
-        </button>
+        </BaseButton>
       </div>
       <p class="text-sm text-gray-600 mt-2">
         Showing {{ filteredEntries.length }} of {{ entries.length }} entries
       </p>
-    </div>
+    </BaseCard>
     
     <div class="flex flex-col sm:flex-row gap-2 mb-6">
-      <button
-        @click="loadEntries"
+      <BaseButton
+        variant="primary"
+        :loading="loading"
         :disabled="loading"
-        class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+        @click="loadEntries"
+        full-width
       >
         {{ loading ? 'Loading...' : '🔄 Refresh' }}
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton
+        variant="success"
+        :disabled="filteredEntries.length === 0"
         @click="handleExportCSV"
-        :disabled="entries.length === 0"
-        class="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+        full-width
       >
-        📥 Export CSV
-      </button>
+        📥 Export CSV ({{ filteredEntries.length }})
+      </BaseButton>
     </div>
     
-    <div v-if="filteredEntries.length === 0" class="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
+    <BaseAlert v-if="filteredEntries.length === 0" type="warning">
       No blood pressure entries in this time range. {{ entries.length > 0 ? 'Try selecting a different time range.' : 'Log some entries to see charts.' }}
-    </div>
+    </BaseAlert>
     
     <div v-else class="space-y-6">
       <!-- Chart -->
@@ -150,7 +149,7 @@ ChartJS.register(
 const entries = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
-const selectedFilter = ref('all')
+const selectedFilter = ref(7) // Default to Last 7 Days
 
 const dateFilters = [
   { label: 'Last 7 Days', value: 7 },
@@ -305,13 +304,25 @@ const loadEntries = async () => {
 
 const handleExportCSV = async () => {
   try {
-    const response = await exportCSV()
+    // Generate CSV from filtered entries
+    const csvHeaders = 'Systolic,Diastolic,Pulse,Notes,Timestamp\n'
+    const csvRows = filteredEntries.value.map(entry => {
+      const notes = entry.notes ? `"${entry.notes.replace(/"/g, '""')}"` : ''
+      return `${entry.systolic},${entry.diastolic},${entry.pulse},${notes},${entry.timestamp}`
+    }).join('\n')
+    
+    const csvContent = csvHeaders + csvRows
     
     // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', `bp_export_${new Date().toISOString().split('T')[0]}.csv`)
+    
+    // Include filter info in filename
+    const filterLabel = dateFilters.find(f => f.value === selectedFilter.value)?.label.replace(/\s+/g, '_') || 'all'
+    link.setAttribute('download', `bp_export_${filterLabel}_${new Date().toISOString().split('T')[0]}.csv`)
+    
     document.body.appendChild(link)
     link.click()
     link.parentNode.removeChild(link)

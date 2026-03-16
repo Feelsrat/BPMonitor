@@ -41,39 +41,27 @@
       
       <!-- Tab Navigation -->
       <div class="flex gap-2 bg-white border-b sticky top-0 z-10">
-        <button
+        <BaseButton
+          variant="tab"
+          :active="activeTab === 'log'"
           @click="activeTab = 'log'"
-          :class="[
-            'px-4 py-3 font-semibold whitespace-nowrap',
-            activeTab === 'log'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          ]"
         >
           📝 Log BP
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
+          variant="tab"
+          :active="activeTab === 'charts'"
           @click="activeTab = 'charts'"
-          :class="[
-            'px-4 py-3 font-semibold whitespace-nowrap',
-            activeTab === 'charts'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          ]"
         >
           📊 Charts
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
+          variant="tab"
+          :active="activeTab === 'import'"
           @click="activeTab = 'import'"
-          :class="[
-            'px-4 py-3 font-semibold whitespace-nowrap',
-            activeTab === 'import'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          ]"
         >
           📥 Import
-        </button>
+        </BaseButton>
       </div>
       
       <!-- Tab Content -->

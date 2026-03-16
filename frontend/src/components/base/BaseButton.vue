@@ -16,7 +16,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'small', 'filter'].includes(value)
+    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'small', 'filter', 'tab'].includes(value)
   },
   type: {
     type: String,
@@ -51,7 +51,10 @@ const buttonClasses = computed(() => {
     small: 'bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 text-sm rounded-md focus:ring-gray-300',
     filter: props.active 
       ? 'bg-blue-600 text-white px-4 py-2 focus:ring-blue-500'
-      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 focus:ring-gray-300'
+      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 focus:ring-gray-300',
+    tab: props.active
+      ? 'border-b-2 border-blue-600 text-blue-600 px-4 py-3 whitespace-nowrap rounded-none focus:ring-blue-500'
+      : 'text-gray-600 hover:text-gray-800 px-4 py-3 whitespace-nowrap rounded-none focus:ring-gray-300'
   }
   
   const width = props.fullWidth ? 'w-full' : ''
