@@ -126,10 +126,33 @@ export default {
         throw new Error('CSV header must contain: Systolic,Diastolic,Pulse,Notes,Timestamp')
       }
 
+      // Proper CSV parser that handles quoted fields with commas
+      const parseCSVLine = (line) => {
+        const values = []
+        let current = ''
+        let inQuotes = false
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i]
+          
+          if (char === '"') {
+            inQuotes = !inQuotes
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim())
+            current = ''
+          } else {
+            current += char
+          }
+        }
+        values.push(current.trim()) // Add the last value
+        
+        return values
+      }
+
       for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue
 
-        const values = lines[i].split(',')
+        const values = parseCSVLine(lines[i])
         if (values.length < 5) continue
 
         entries.push({
