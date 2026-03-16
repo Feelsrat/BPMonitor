@@ -1,17 +1,11 @@
 {
-  "buildCommand": "cd frontend && npm ci && npm run build",
-  "devCommand": "cd frontend && npm run dev",
-  "installCommand": "npm install --prefix api",
+  "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
+  "installCommand": "npm install --prefix api && npm install --prefix frontend",
   "crons": [
     {
       "path": "/api/cron/backup",
       "schedule": "0 0 * * *"
     }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  ]
 }
