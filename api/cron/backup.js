@@ -34,12 +34,11 @@ export default async function handler(req, res) {
     const timestamp = new Date().toISOString();
     const dateStr = timestamp.split('T')[0];
 
-    // Generate backup files
-    const csv = generateCSV(data);
+    // Generate backup file (JSON only)
     const json = JSON.stringify(data, null, 2);
 
     // Commit to GitHub
-    await commitToGitHub(csv, json, dateStr, data.length);
+    await commitToGitHub(json, dateStr, data.length);
 
     // Save hash for next comparison
     await saveBackupHash(currentHash);
@@ -58,16 +57,6 @@ export default async function handler(req, res) {
       message: error.message
     });
   }
-}
-
-function generateCSV(data) {
-  const header = 'Systolic,Diastolic,Pulse,Notes,Timestamp\n';
-  const rows = data.map(entry => {
-    const notes = (entry.notes || '').replace(/"/g, '""');
-    return `${entry.systolic},${entry.diastolic},${entry.pulse},"${notes}",${entry.timestamp}`;
-  }).join('\n');
-
-  return header + rows;
 }
 
 async function hashData(data) {
@@ -118,7 +107,7 @@ async function saveBackupHash(hash) {
   }
 }
 
-async function commitToGitHub(csv, json, dateStr, entryCount) {
+async function commitToGitHub(json, dateStr, entryCount) {
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_BACKUP_REPO; // format: "username/repo-name"
 
@@ -143,19 +132,11 @@ async function commitToGitHub(csv, json, dateStr, entryCount) {
 
   const baseUrl = `https://api.github.com/repos/${owner}/${repoName}/contents`;
 
-  // Upload CSV file
-  await uploadFile(
-    `${baseUrl}/${dateStr}.csv`,
-    csv,
-    `Backup ${dateStr} - ${entryCount} entries`,
-    token
-  );
-
   // Upload JSON file
   await uploadFile(
     `${baseUrl}/${dateStr}.json`,
     json,
-    `Backup ${dateStr} - ${entryCount} entries (JSON)`,
+    `Backup ${dateStr} - ${entryCount} entries`,
     token
   );
 }
