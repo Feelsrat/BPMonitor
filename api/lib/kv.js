@@ -5,13 +5,26 @@ import { Redis } from '@upstash/redis';
 // Local storage file for development
 const LOCAL_DATA_FILE = join(process.cwd(), 'bp-data.json');
 
-// Check if we're in local development (no Upstash env vars)
-const isLocal = !process.env.UPSTASH_REDIS_REST_URL;
+// Check if we're in local development (check for any Redis env vars)
+const isLocal = !(process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL);
 
 // Get Redis client (lazy initialization)
 function getRedisClient() {
   if (isLocal) return null;
-  return Redis.fromEnv();
+  
+  // Try standard Upstash env vars first, then fall back to BP_ prefixed vars
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.BP_KV_REST_API_TOKEN;
+  
+  if (!url || !token) {
+    console.error('❌ Redis credentials not found in environment variables');
+    return null;
+  }
+  
+  return new Redis({
+    url,
+    token,
+  });
 }
 
 // Local file-based storage functions
