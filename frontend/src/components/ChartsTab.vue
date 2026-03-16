@@ -5,7 +5,7 @@
     <!-- Date Range Filters -->
     <BaseCard padding="p-4" class="mb-6">
       <h3 class="text-sm font-semibold text-gray-700 mb-3">Time Range</h3>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-2 mb-3">
         <BaseButton
           v-for="filter in dateFilters"
           :key="filter.value"
@@ -16,6 +16,36 @@
           {{ filter.label }}
         </BaseButton>
       </div>
+      
+      <!-- Custom Date Range Picker -->
+      <div v-if="selectedFilter === 'custom'" class="mt-3 p-3 bg-gray-50 rounded-lg">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <BaseInput
+            v-model="customStartDate"
+            type="date"
+            label="Start Date"
+          />
+          <BaseInput
+            v-model="customEndDate"
+            type="date"
+            label="End Date"
+          />
+        </div>
+      </div>
+      
+      <h3 class="text-sm font-semibold text-gray-700 mb-3 mt-4">Filter by Category</h3>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <BaseButton
+          v-for="cat in categories"
+          :key="cat.value"
+          variant="filter"
+          :active="selectedCategory === cat.value"
+          @click="selectedCategory = cat.value"
+        >
+          {{ cat.label }}
+        </BaseButton>
+      </div>
+      
       <p class="text-sm text-gray-600 mt-2">
         Showing {{ filteredEntries.length }} of {{ entries.length }} entries
       </p>
@@ -157,22 +187,55 @@ const entries = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
 const selectedFilter = ref(7) // Default to Last 7 Days
+const selectedCategory = ref('all') // Filter by category
+const customStartDate = ref('')
+const customEndDate = ref('')
 
 const dateFilters = [
   { label: 'Last 7 Days', value: 7 },
   { label: 'Last 30 Days', value: 30 },
   { label: 'Last 90 Days', value: 90 },
   { label: 'All Time', value: 'all' },
+  { label: 'Custom Range', value: 'custom' },
+]
+
+const categories = [
+  { label: 'All Categories', value: 'all' },
+  { label: '🏠 Home', value: '🏠 Home' },
+  { label: '🏥 Doctor', value: '🏥 Doctor' },
+  { label: '💊 Medication', value: '💊 Medication' },
+  { label: '🏃 Exercise', value: '🏃 Exercise' },
+  { label: '💼 Work', value: '💼 Work' },
+  { label: '🌙 Sleep', value: '🌙 Sleep' },
+  { label: '🍽️ Meal', value: '🍽️ Meal' },
 ]
 
 const filteredEntries = computed(() => {
-  if (selectedFilter.value === 'all') {
-    return entries.value
+  let filtered = entries.value
+  
+  // Filter by date range
+  if (selectedFilter.value === 'custom') {
+    if (customStartDate.value && customEndDate.value) {
+      const start = new Date(customStartDate.value)
+      const end = new Date(customEndDate.value)
+      end.setHours(23, 59, 59, 999) // Include the entire end day
+      filtered = filtered.filter(e => {
+        const entryDate = new Date(e.timestamp)
+        return entryDate >= start && entryDate <= end
+      })
+    }
+  } else if (selectedFilter.value !== 'all') {
+    const now = new Date()
+    const daysAgo = new Date(now.getTime() - selectedFilter.value * 24 * 60 * 60 * 1000)
+    filtered = filtered.filter(e => new Date(e.timestamp) >= daysAgo)
   }
   
-  const now = new Date()
-  const daysAgo = new Date(now.getTime() - selectedFilter.value * 24 * 60 * 60 * 1000)
-  return entries.value.filter(e => new Date(e.timestamp) >= daysAgo)
+  // Filter by category
+  if (selectedCategory.value !== 'all') {
+    filtered = filtered.filter(e => e.category === selectedCategory.value)
+  }
+  
+  return filtered
 })
 
 const lastEntry = computed(() => filteredEntries.value[0])

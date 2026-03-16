@@ -74,22 +74,62 @@
       
       <!-- Trends (Last 30 vs 30-60 days ago) -->
       <BaseCard>
-        <h3 class="text-xl font-bold text-gray-800 mb-4">30-Day Trend Analysis</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="text-center p-4 bg-blue-50 rounded-lg">
-            <div class="text-2xl font-bold text-blue-700">{{ stats.trends.last30.avgSystolic }}/{{ stats.trends.last30.avgDiastolic }}</div>
-            <div class="text-sm text-blue-600">Last 30 Days</div>
-            <div class="text-xs text-gray-500">{{ stats.trends.last30.count }} readings</div>
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Trend Comparisons</h3>
+        
+        <!-- 30-Day Comparison -->
+        <div class="mb-6">
+          <h4 class="text-sm font-semibold text-gray-600 mb-3">30-Day Period Comparison</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center p-4 bg-blue-50 rounded-lg">
+              <div class="text-2xl font-bold text-blue-700">{{ stats.trends.last30.avgSystolic }}/{{ stats.trends.last30.avgDiastolic }}</div>
+              <div class="text-sm text-blue-600">Last 30 Days</div>
+              <div class="text-xs text-gray-500">{{ stats.trends.last30.count }} readings</div>
+            </div>
+            <div class="text-center p-4 bg-purple-50 rounded-lg">
+              <div class="text-2xl font-bold text-purple-700">{{ stats.trends.prev30.avgSystolic }}/{{ stats.trends.prev30.avgDiastolic }}</div>
+              <div class="text-sm text-purple-600">30-60 Days Ago</div>
+              <div class="text-xs text-gray-500">{{ stats.trends.prev30.count }} readings</div>
+            </div>
+            <div class="text-center p-4 rounded-lg" :class="trendClass">
+              <div class="text-2xl font-bold">{{ stats.trends.change.systolic > 0 ? '+' : '' }}{{ stats.trends.change.systolic }}</div>
+              <div class="text-sm">Trend</div>
+              <div class="text-xs">{{ stats.trends.change.direction }}</div>
+            </div>
           </div>
-          <div class="text-center p-4 bg-purple-50 rounded-lg">
-            <div class="text-2xl font-bold text-purple-700">{{ stats.trends.prev30.avgSystolic }}/{{ stats.trends.prev30.avgDiastolic }}</div>
-            <div class="text-sm text-purple-600">30-60 Days Ago</div>
-            <div class="text-xs text-gray-500">{{ stats.trends.prev30.count }} readings</div>
+        </div>
+        
+        <!-- This Month vs Last Month -->
+        <div class="mb-6">
+          <h4 class="text-sm font-semibold text-gray-600 mb-3">This Month vs Last Month</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center p-4 bg-green-50 rounded-lg">
+              <div class="text-2xl font-bold text-green-700">{{ stats.monthly.thisMonth.avgSystolic }}/{{ stats.monthly.thisMonth.avgDiastolic }}</div>
+              <div class="text-sm text-green-600">This Month</div>
+              <div class="text-xs text-gray-500">{{ stats.monthly.thisMonth.count }} readings</div>
+            </div>
+            <div class="text-center p-4 bg-teal-50 rounded-lg">
+              <div class="text-2xl font-bold text-teal-700">{{ stats.monthly.lastMonth.avgSystolic }}/{{ stats.monthly.lastMonth.avgDiastolic }}</div>
+              <div class="text-sm text-teal-600">Last Month</div>
+              <div class="text-xs text-gray-500">{{ stats.monthly.lastMonth.count }} readings</div>
+            </div>
+            <div class="text-center p-4 rounded-lg" :class="monthlyTrendClass">
+              <div class="text-2xl font-bold">{{ stats.monthly.change.systolic > 0 ? '+' : '' }}{{ stats.monthly.change.systolic }}</div>
+              <div class="text-sm">Change</div>
+              <div class="text-xs">{{ stats.monthly.change.direction }}</div>
+            </div>
           </div>
-          <div class="text-center p-4 rounded-lg" :class="trendClass">
-            <div class="text-2xl font-bold">{{ stats.trends.change.systolic > 0 ? '+' : '' }}{{ stats.trends.change.systolic }}</div>
-            <div class="text-sm">Trend</div>
-            <div class="text-xs">{{ stats.trends.change.direction }}</div>
+        </div>
+        
+        <!-- Yearly Summary -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-600 mb-3">Year Overview</h4>
+          <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+            <div v-for="month in stats.yearlyByMonth" :key="month.label" class="text-center p-3 bg-gray-50 rounded-lg">
+              <div class="text-xs font-semibold text-gray-600 mb-1">{{ month.label }}</div>
+              <div class="text-sm font-bold text-gray-800">{{ month.avgSystolic }}</div>
+              <div class="text-xs text-gray-500">{{ month.avgDiastolic }}</div>
+              <div class="text-xs text-gray-400 mt-1">{{ month.count }}</div>
+            </div>
           </div>
         </div>
       </BaseCard>
@@ -148,6 +188,12 @@ const stats = computed(() => {
         prev30: { avgSystolic: 0, avgDiastolic: 0, count: 0 },
         change: { systolic: 0, diastolic: 0, direction: '' },
       },
+      monthly: {
+        thisMonth: { avgSystolic: 0, avgDiastolic: 0, count: 0 },
+        lastMonth: { avgSystolic: 0, avgDiastolic: 0, count: 0 },
+        change: { systolic: 0, diastolic: 0, direction: '' },
+      },
+      yearlyByMonth: [],
       byCategory: [],
     }
   }
@@ -250,6 +296,58 @@ const stats = computed(() => {
   else if (trends.change.systolic < 0) trends.change.direction = 'Decreasing ⬇️'
   else trends.change.direction = 'Stable ➡️'
   
+  // Monthly comparison (this month vs last month)
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+  
+  const thisMonthEntries = entries.value.filter(e => new Date(e.timestamp) >= thisMonthStart)
+  const lastMonthEntries = entries.value.filter(e => {
+    const date = new Date(e.timestamp)
+    return date >= lastMonthStart && date <= lastMonthEnd
+  })
+  
+  const monthly = {
+    thisMonth: {
+      avgSystolic: thisMonthEntries.length > 0 ? Math.round(thisMonthEntries.reduce((sum, e) => sum + e.systolic, 0) / thisMonthEntries.length) : 0,
+      avgDiastolic: thisMonthEntries.length > 0 ? Math.round(thisMonthEntries.reduce((sum, e) => sum + e.diastolic, 0) / thisMonthEntries.length) : 0,
+      count: thisMonthEntries.length,
+    },
+    lastMonth: {
+      avgSystolic: lastMonthEntries.length > 0 ? Math.round(lastMonthEntries.reduce((sum, e) => sum + e.systolic, 0) / lastMonthEntries.length) : 0,
+      avgDiastolic: lastMonthEntries.length > 0 ? Math.round(lastMonthEntries.reduce((sum, e) => sum + e.diastolic, 0) / lastMonthEntries.length) : 0,
+      count: lastMonthEntries.length,
+    },
+    change: { systolic: 0, diastolic: 0, direction: '' },
+  }
+  
+  monthly.change.systolic = monthly.thisMonth.avgSystolic - monthly.lastMonth.avgSystolic
+  monthly.change.diastolic = monthly.thisMonth.avgDiastolic - monthly.lastMonth.avgDiastolic
+  
+  if (monthly.change.systolic > 0) monthly.change.direction = 'Increasing ⬆️'
+  else if (monthly.change.systolic < 0) monthly.change.direction = 'Decreasing ⬇️'
+  else monthly.change.direction = 'Stable ➡️'
+  
+  // Yearly by month (last 6 months)
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const yearlyByMonth = []
+  
+  for (let i = 5; i >= 0; i--) {
+    const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
+    const monthEntries = entries.value.filter(e => {
+      const date = new Date(e.timestamp)
+      return date >= monthDate && date <= monthEnd
+    })
+    
+    yearlyByMonth.push({
+      label: monthNames[monthDate.getMonth()],
+      avgSystolic: monthEntries.length > 0 ? Math.round(monthEntries.reduce((sum, e) => sum + e.systolic, 0) / monthEntries.length) : 0,
+      avgDiastolic: monthEntries.length > 0 ? Math.round(monthEntries.reduce((sum, e) => sum + e.diastolic, 0) / monthEntries.length) : 0,
+      count: monthEntries.length,
+    })
+  }
+  
   // By Category
   const categoryMap = {}
   entries.value.forEach(e => {
@@ -278,12 +376,21 @@ const stats = computed(() => {
     timeOfDay,
     dayOfWeek: dayData,
     trends,
+    monthly,
+    yearlyByMonth,
     byCategory,
   }
 })
 
 const trendClass = computed(() => {
   const change = stats.value.trends.change.systolic
+  if (change < -5) return 'bg-green-50 text-green-700'
+  if (change > 5) return 'bg-red-50 text-red-700'
+  return 'bg-gray-50 text-gray-700'
+})
+
+const monthlyTrendClass = computed(() => {
+  const change = stats.value.monthly.change.systolic
   if (change < -5) return 'bg-green-50 text-green-700'
   if (change > 5) return 'bg-red-50 text-red-700'
   return 'bg-gray-50 text-gray-700'
