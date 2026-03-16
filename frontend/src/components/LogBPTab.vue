@@ -57,10 +57,24 @@
         <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
           Notes (optional)
         </label>
+        
+        <!-- Quick note templates -->
+        <div class="flex flex-wrap gap-2 mb-2">
+          <button
+            v-for="template in noteTemplates"
+            :key="template"
+            type="button"
+            @click="form.notes = template"
+            class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition"
+          >
+            {{ template }}
+          </button>
+        </div>
+        
         <textarea
           id="notes"
           v-model="form.notes"
-          placeholder="e.g., after exercise, feeling stressed, etc."
+          placeholder="Type custom note or click a template above"
           rows="3"
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         ></textarea>
@@ -102,6 +116,17 @@ export default {
   name: 'LogBPTab',
   emits: ['entry-created'],
   setup(_, { emit }) {
+    const noteTemplates = [
+      'Just woke up',
+      'Before medication',
+      'After medication',
+      'After exercise',
+      'Feeling stressed',
+      'Feeling relaxed',
+      'After meal',
+      'Before bed',
+    ]
+    
     const form = ref({
       systolic: '',
       diastolic: '',
@@ -147,6 +172,30 @@ export default {
         
         // Emit event so parent can refresh charts
         emit('entry-created')
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          successMessage.value = ''
+        }, 3000)
+      } catch (err) {
+        errorMessage.value = err.response?.data?.detail || 'Failed to log entry. Please try again.'
+      } finally {
+        loading.value = false
+      }
+    }
+    
+    return {
+      noteTemplates,
+      form,
+      loading,
+      successMessage,
+      errorMessage,
+      resetForm,
+      handleSubmit,
+    }
+  },
+}
+</script>
         
         // Clear success message after 3 seconds
         setTimeout(() => {

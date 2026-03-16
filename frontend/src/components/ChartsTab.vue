@@ -2,6 +2,29 @@
   <div class="p-4 md:p-8 max-w-6xl mx-auto">
     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Charts & Analytics</h2>
     
+    <!-- Date Range Filters -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">Time Range</h3>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="filter in dateFilters"
+          :key="filter.value"
+          @click="selectedFilter = filter.value"
+          :class="[
+            'px-4 py-2 rounded-lg font-semibold transition',
+            selectedFilter === filter.value
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          ]"
+        >
+          {{ filter.label }}
+        </button>
+      </div>
+      <p class="text-sm text-gray-600 mt-2">
+        Showing {{ filteredEntries.length }} of {{ entries.length }} entries
+      </p>
+    </div>
+    
     <div class="flex flex-col sm:flex-row gap-2 mb-6">
       <button
         @click="loadEntries"
@@ -19,8 +42,8 @@
       </button>
     </div>
     
-    <div v-if="entries.length === 0" class="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
-      No blood pressure entries yet. Log some entries to see charts.
+    <div v-if="filteredEntries.length === 0" class="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
+      No blood pressure entries in this time range. {{ entries.length > 0 ? 'Try selecting a different time range.' : 'Log some entries to see charts.' }}
     </div>
     
     <div v-else class="space-y-6">
@@ -80,7 +103,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="entry in entries.slice(0, 20)" :key="entry.id" class="border-b hover:bg-gray-50">
+            <tr v-for="entry in filteredEntries.slice(0, 20)" :key="entry.id" class="border-b hover:bg-gray-50">
               <td class="py-2 px-2">{{ formatDate(entry.timestamp) }}</td>
               <td class="text-right py-2 px-2">{{ entry.systolic }}/{{ entry.diastolic }}</td>
               <td class="text-right py-2 px-2">{{ entry.pulse }}</td>
@@ -133,13 +156,31 @@ export default {
     const entries = ref([])
     const loading = ref(false)
     const errorMessage = ref('')
+    const selectedFilter = ref('all')
     
-    const lastEntry = computed(() => entries.value[0])
+    const dateFilters = [
+      { label: 'Last 7 Days', value: 7 },
+      { label: 'Last 30 Days', value: 30 },
+      { label: 'Last 90 Days', value: 90 },
+      { label: 'All Time', value: 'all' },
+    ]
+    
+    const filteredEntries = computed(() => {
+      if (selectedFilter.value === 'all') {
+        return entries.value
+      }
+      
+      const now = new Date()
+      const daysAgo = new Date(now.getTime() - selectedFilter.value * 24 * 60 * 60 * 1000)
+      return entries.value.filter(e => new Date(e.timestamp) >= daysAgo)
+    })
+    
+    const lastEntry = computed(() => filteredEntries.value[0])
     
     const avgSystolic7d = computed(() => {
       const now = new Date()
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const recent = entries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
+      const recent = filteredEntries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
       if (recent.length === 0) return '-'
       const sum = recent.reduce((acc, e) => acc + e.systolic, 0)
       return Math.round(sum / recent.length)
@@ -148,7 +189,7 @@ export default {
     const avgDiastolic7d = computed(() => {
       const now = new Date()
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const recent = entries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
+      const recent = filteredEntries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
       if (recent.length === 0) return '-'
       const sum = recent.reduce((acc, e) => acc + e.diastolic, 0)
       return Math.round(sum / recent.length)
@@ -156,7 +197,7 @@ export default {
     
     const chartData = computed(() => {
       // Sort entries by timestamp (oldest first) for chart
-      const sorted = [...entries.value].reverse()
+      const sorted = [...filteredEntries.value].reverse()
       
       return {
         labels: sorted.map(e => formatDate(e.timestamp)),
@@ -223,7 +264,7 @@ export default {
             callbacks: {
               footer: (context) => {
                 const index = context[0].dataIndex
-                const sorted = [...entries.value].reverse()
+                const sorted = [...filteredEntries.value].reverse()
                 const entry = sorted[index]
                 return entry?.notes ? `Notes: ${entry.notes}` : ''
               },
@@ -294,6 +335,9 @@ export default {
       entries,
       loading,
       errorMessage,
+      selectedFilter,
+      dateFilters,
+      filteredEntries,
       lastEntry,
       avgSystolic7d,
       avgDiastolic7d,
