@@ -48,7 +48,7 @@
     
     <div v-else class="space-y-6">
       <!-- Chart -->
-      <div class="bg-white rounded-lg shadow-md p-6">
+      <BaseCard>
         <h3 class="text-xl font-bold text-gray-800 mb-4">Blood Pressure Trends</h3>
         <div class="relative h-80 md:h-96">
           <Line :data="chartData" :options="chartOptions" />
@@ -67,31 +67,31 @@
             <span class="text-gray-600">High (≥140/≥90)</span>
           </div>
         </div>
-      </div>
+      </BaseCard>
       
       <!-- Statistics -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <p class="text-gray-600 text-sm mb-2">Latest Systolic</p>
-          <p class="text-3xl font-bold text-gray-800">{{ lastEntry?.systolic }}</p>
-          <p class="text-xs text-gray-500 mt-2">{{ formatDate(lastEntry?.timestamp) }}</p>
-        </div>
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <p class="text-gray-600 text-sm mb-2">Avg Systolic (7 days)</p>
-          <p class="text-3xl font-bold text-gray-800">{{ avgSystolic7d }}</p>
-        </div>
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <p class="text-gray-600 text-sm mb-2">Avg Diastolic (7 days)</p>
-          <p class="text-3xl font-bold text-gray-800">{{ avgDiastolic7d }}</p>
-        </div>
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <p class="text-gray-600 text-sm mb-2">Total Entries</p>
-          <p class="text-3xl font-bold text-gray-800">{{ entries.length }}</p>
-        </div>
+        <BaseStatCard
+          label="Latest Systolic"
+          :value="lastEntry?.systolic"
+          :subtitle="formatDate(lastEntry?.timestamp)"
+        />
+        <BaseStatCard
+          label="Avg Systolic (7 days)"
+          :value="avgSystolic7d"
+        />
+        <BaseStatCard
+          label="Avg Diastolic (7 days)"
+          :value="avgDiastolic7d"
+        />
+        <BaseStatCard
+          label="Total Entries"
+          :value="entries.length"
+        />
       </div>
       
       <!-- Table (scrollable on mobile) -->
-      <div class="bg-white rounded-lg shadow-md p-6 overflow-x-auto">
+      <BaseCard padding="p-6" class="overflow-x-auto">
         <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Entries</h3>
         <table class="w-full text-sm">
           <thead>
@@ -111,12 +111,12 @@
             </tr>
           </tbody>
         </table>
-      </div>
+      </BaseCard>
     </div>
     
-    <div v-if="errorMessage" class="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+    <BaseAlert v-if="errorMessage" type="error" class="mt-4">
       {{ errorMessage }}
-    </div>
+    </BaseAlert>
   </div>
 </template>
 

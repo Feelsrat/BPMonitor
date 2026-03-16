@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <div class="bg-white rounded-lg shadow-md p-6">
+    <BaseCard>
       <h2 class="text-2xl font-bold text-gray-800 mb-6">📥 Import Data</h2>
       
       <div class="space-y-4">
@@ -13,12 +13,12 @@
             @change="onFileSelected"
             class="hidden"
           />
-          <button
+          <BaseButton
+            variant="primary"
             @click="$refs.fileInput.click()"
-            class="text-blue-600 hover:text-blue-800 font-semibold"
           >
             Click to select CSV or JSON file
-          </button>
+          </BaseButton>
           <p v-if="selectedFile" class="text-green-600 mt-2">
             ✓ Selected: {{ selectedFile.name }}
           </p>
@@ -55,28 +55,31 @@
 
         <!-- Action Buttons -->
         <div class="flex gap-4">
-          <button
-            @click="importData"
+          <BaseButton
+            variant="success"
             :disabled="!selectedFile || isImporting"
-            class="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition"
+            :loading="isImporting"
+            @click="importFileData"
+            full-width
           >
             {{ isImporting ? 'Importing...' : '📤 Import' }}
-          </button>
-          <button
+          </BaseButton>
+          <BaseButton
+            variant="secondary"
             @click="resetForm"
-            class="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition"
+            full-width
           >
             Reset
-          </button>
+          </BaseButton>
         </div>
 
         <!-- Messages -->
-        <div v-if="successMessage" class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <BaseAlert v-if="successMessage" type="success">
           ✓ {{ successMessage }}
-        </div>
-        <div v-if="errorMessage" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        </BaseAlert>
+        <BaseAlert v-if="errorMessage" type="error">
           ✗ {{ errorMessage }}
-        </div>
+        </BaseAlert>
 
         <!-- Format Info -->
         <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
@@ -88,163 +91,147 @@
           </div>
         </div>
       </div>
-    </div>
+    </BaseCard>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
-import { importData } from '../services/api'
+import { importData as importDataAPI } from '../services/api'
 
-export default {
-  name: 'ImportTab',
-  emits: ['import-complete'],
-  setup(props, { emit }) {
-    const fileInput = ref(null)
-    const selectedFile = ref(null)
-    const importMode = ref('merge')
-    const isImporting = ref(false)
-    const successMessage = ref('')
-    const errorMessage = ref('')
+const emit = defineEmits(['import-complete'])
 
-    const onFileSelected = (event) => {
-      const file = event.target.files?.[0]
-      if (file) {
-        selectedFile.value = file
-        errorMessage.value = ''
-        successMessage.value = ''
+const fileInput = ref(null)
+const selectedFile = ref(null)
+const importMode = ref('merge')
+const isImporting = ref(false)
+const successMessage = ref('')
+const errorMessage = ref('')
+
+const onFileSelected = (event) => {
+  const file = event.target.files?.[0]
+  if (file) {
+    selectedFile.value = file
+    errorMessage.value = ''
+    successMessage.value = ''
+  }
+}
+
+const parseCSV = (csvText) => {
+  const lines = csvText.trim().split('\n')
+  const header = lines[0].toLowerCase()
+  const entries = []
+
+  // Check if header exists
+  if (!header.includes('systolic')) {
+    throw new Error('CSV header must contain: Systolic,Diastolic,Pulse,Notes,Timestamp')
+  }
+
+  // Proper CSV parser that handles quoted fields with commas
+  const parseCSVLine = (line) => {
+    const values = []
+    let current = ''
+    let inQuotes = false
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      
+      if (char === '"') {
+        inQuotes = !inQuotes
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim())
+        current = ''
+      } else {
+        current += char
       }
     }
+    values.push(current.trim()) // Add the last value
+    
+    return values
+  }
 
-    const parseCSV = (csvText) => {
-      const lines = csvText.trim().split('\n')
-      const header = lines[0].toLowerCase()
-      const entries = []
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue
 
-      // Check if header exists
-      if (!header.includes('systolic')) {
-        throw new Error('CSV header must contain: Systolic,Diastolic,Pulse,Notes,Timestamp')
-      }
+    const values = parseCSVLine(lines[i])
+    if (values.length < 5) continue
 
-      // Proper CSV parser that handles quoted fields with commas
-      const parseCSVLine = (line) => {
-        const values = []
-        let current = ''
-        let inQuotes = false
-        
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i]
-          
-          if (char === '"') {
-            inQuotes = !inQuotes
-          } else if (char === ',' && !inQuotes) {
-            values.push(current.trim())
-            current = ''
-          } else {
-            current += char
-          }
-        }
-        values.push(current.trim()) // Add the last value
-        
-        return values
-      }
+    entries.push({
+      systolic: parseInt(values[0]),
+      diastolic: parseInt(values[1]),
+      pulse: parseInt(values[2]),
+      notes: values[3]?.replace(/^"|"$/g, '') || '',
+      timestamp: values[4]?.trim() || new Date().toISOString()
+    })
+  }
 
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue
+  return entries
+}
 
-        const values = parseCSVLine(lines[i])
-        if (values.length < 5) continue
+const parseJSON = (jsonText) => {
+  const data = JSON.parse(jsonText)
+  if (!Array.isArray(data)) {
+    throw new Error('JSON must be an array of entries')
+  }
 
-        entries.push({
-          systolic: parseInt(values[0]),
-          diastolic: parseInt(values[1]),
-          pulse: parseInt(values[2]),
-          notes: values[3]?.replace(/^"|"$/g, '') || '',
-          timestamp: values[4]?.trim() || new Date().toISOString()
-        })
-      }
+  return data.map(entry => ({
+    systolic: parseInt(entry.systolic),
+    diastolic: parseInt(entry.diastolic),
+    pulse: parseInt(entry.pulse),
+    notes: entry.notes || '',
+    timestamp: entry.timestamp || new Date().toISOString()
+  }))
+}
 
-      return entries
+const importFileData = async () => {
+  if (!selectedFile.value) {
+    errorMessage.value = 'Please select a file'
+    return
+  }
+
+  isImporting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    const fileContent = await selectedFile.value.text()
+    let entries = []
+
+    if (selectedFile.value.name.endsWith('.csv')) {
+      entries = parseCSV(fileContent)
+    } else if (selectedFile.value.name.endsWith('.json')) {
+      entries = parseJSON(fileContent)
+    } else {
+      throw new Error('Unsupported file format. Use .csv or .json')
     }
 
-    const parseJSON = (jsonText) => {
-      const data = JSON.parse(jsonText)
-      if (!Array.isArray(data)) {
-        throw new Error('JSON must be an array of entries')
-      }
-
-      return data.map(entry => ({
-        systolic: parseInt(entry.systolic),
-        diastolic: parseInt(entry.diastolic),
-        pulse: parseInt(entry.pulse),
-        notes: entry.notes || '',
-        timestamp: entry.timestamp || new Date().toISOString()
-      }))
+    if (entries.length === 0) {
+      throw new Error('No valid entries found in file')
     }
 
-    const importFileData = async () => {
-      if (!selectedFile.value) {
-        errorMessage.value = 'Please select a file'
-        return
-      }
+    // Call import API
+    const response = await importDataAPI(entries, importMode.value)
 
-      isImporting.value = true
-      errorMessage.value = ''
-      successMessage.value = ''
-
-      try {
-        const fileContent = await selectedFile.value.text()
-        let entries = []
-
-        if (selectedFile.value.name.endsWith('.csv')) {
-          entries = parseCSV(fileContent)
-        } else if (selectedFile.value.name.endsWith('.json')) {
-          entries = parseJSON(fileContent)
-        } else {
-          throw new Error('Unsupported file format. Use .csv or .json')
-        }
-
-        if (entries.length === 0) {
-          throw new Error('No valid entries found in file')
-        }
-
-        // Call import API
-        const response = await importData(entries, importMode.value)
-
-        if (response.data.success) {
-          successMessage.value = response.data.message
-          resetForm()
-          emit('import-complete')
-        } else {
-          errorMessage.value = response.data.error || 'Import failed'
-        }
-      } catch (error) {
-        errorMessage.value = error.message || 'Failed to import data'
-        console.error('Import error:', error)
-      } finally {
-        isImporting.value = false
-      }
+    if (response.data.success) {
+      successMessage.value = response.data.message
+      resetForm()
+      emit('import-complete')
+    } else {
+      errorMessage.value = response.data.error || 'Import failed'
     }
+  } catch (error) {
+    errorMessage.value = error.message || 'Failed to import data'
+    console.error('Import error:', error)
+  } finally {
+    isImporting.value = false
+  }
+}
 
-    const resetForm = () => {
-      selectedFile.value = null
-      importMode.value = 'merge'
-      if (fileInput.value) {
-        fileInput.value.value = ''
-      }
-    }
-
-    return {
-      fileInput,
-      selectedFile,
-      importMode,
-      isImporting,
-      successMessage,
-      errorMessage,
-      onFileSelected,
-      importData: importFileData,
-      resetForm
-    }
+const resetForm = () => {
+  selectedFile.value = null
+  importMode.value = 'merge'
+  if (fileInput.value) {
+    fileInput.value.value = ''
   }
 }
 </script>

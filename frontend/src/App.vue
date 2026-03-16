@@ -5,26 +5,25 @@
       <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
         <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">BP Monitor</h2>
         <form @submit.prevent="login" class="space-y-4">
-          <div>
-            <label class="block text-gray-700 font-semibold mb-2">Password</label>
-            <input
-              v-model="password"
-              type="password"
-              placeholder="Enter password"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button
+          <BaseInput
+            v-model="password"
+            type="password"
+            label="Password"
+            placeholder="Enter password"
+          />
+          <BaseButton
             type="submit"
+            variant="primary"
+            :loading="isLoggingIn"
             :disabled="isLoggingIn"
-            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+            full-width
           >
             {{ isLoggingIn ? 'Logging in...' : 'Log In' }}
-          </button>
+          </BaseButton>
         </form>
-        <div v-if="loginError" class="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <BaseAlert v-if="loginError" type="error" class="mt-4">
           {{ loginError }}
-        </div>
+        </BaseAlert>
       </div>
     </div>
 
@@ -34,12 +33,9 @@
       <header class="bg-white shadow">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 class="text-2xl font-bold text-gray-800">BP Monitor</h1>
-          <button
-            @click="logout"
-            class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
-          >
+          <BaseButton variant="danger" @click="logout">
             Logout
-          </button>
+          </BaseButton>
         </div>
       </header>
       

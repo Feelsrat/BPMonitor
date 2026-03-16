@@ -23,6 +23,9 @@ backend/dist/
 frontend/dist/
 frontend/.vite/
 
+# Auto-generated type declarations
+frontend/components.d.ts
+
 # IDE
 .vscode/
 .idea/

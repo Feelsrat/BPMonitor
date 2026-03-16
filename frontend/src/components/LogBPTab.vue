@@ -4,106 +4,92 @@
     
     <form @submit.prevent="handleSubmit" class="bg-white rounded-lg shadow-md p-6 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label for="systolic" class="block text-sm font-medium text-gray-700 mb-2">
-            Systolic (mmHg)
-          </label>
-          <input
-            id="systolic"
-            v-model.number="form.systolic"
-            type="number"
-            min="50"
-            max="250"
-            placeholder="120"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
+        <BaseInput
+          id="systolic"
+          v-model="form.systolic"
+          type="number"
+          label="Systolic (mmHg)"
+          placeholder="120"
+          :min="50"
+          :max="250"
+          required
+        />
         
-        <div>
-          <label for="diastolic" class="block text-sm font-medium text-gray-700 mb-2">
-            Diastolic (mmHg)
-          </label>
-          <input
-            id="diastolic"
-            v-model.number="form.diastolic"
-            type="number"
-            min="30"
-            max="150"
-            placeholder="80"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
+        <BaseInput
+          id="diastolic"
+          v-model="form.diastolic"
+          type="number"
+          label="Diastolic (mmHg)"
+          placeholder="80"
+          :min="30"
+          :max="150"
+          required
+        />
         
-        <div>
-          <label for="pulse" class="block text-sm font-medium text-gray-700 mb-2">
-            Pulse (BPM)
-          </label>
-          <input
-            id="pulse"
-            v-model.number="form.pulse"
-            type="number"
-            min="30"
-            max="200"
-            placeholder="72"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
+        <BaseInput
+          id="pulse"
+          v-model="form.pulse"
+          type="number"
+          label="Pulse (BPM)"
+          placeholder="72"
+          :min="30"
+          :max="200"
+          required
+        />
       </div>
       
       <div>
-        <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
           Notes (optional)
         </label>
         
         <!-- Quick note templates -->
         <div class="flex flex-wrap gap-2 mb-2">
-          <button
+          <BaseButton
             v-for="template in noteTemplates"
             :key="template"
+            variant="small"
             type="button"
             @click="form.notes = template"
-            class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition"
           >
             {{ template }}
-          </button>
+          </BaseButton>
         </div>
         
-        <textarea
+        <BaseTextarea
           id="notes"
           v-model="form.notes"
           placeholder="Type custom note or click a template above"
-          rows="3"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        ></textarea>
+          :rows="3"
+        />
       </div>
       
       <div class="flex flex-col sm:flex-row gap-3 pt-4">
-        <button
+        <BaseButton
           type="submit"
-          :disabled="loading"
-          class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+          variant="primary"
+          :loading="loading"
+          full-width
         >
           {{ loading ? 'Saving...' : 'Log Entry' }}
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
           type="button"
+          variant="secondary"
           @click="resetForm"
-          class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200"
+          full-width
         >
           Clear
-        </button>
+        </BaseButton>
       </div>
       
-      <div v-if="successMessage" class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+      <BaseAlert v-if="successMessage" type="success">
         {{ successMessage }}
-      </div>
+      </BaseAlert>
       
-      <div v-if="errorMessage" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+      <BaseAlert v-if="errorMessage" type="error">
         {{ errorMessage }}
-      </div>
+      </BaseAlert>
     </form>
   </div>
 </template>
