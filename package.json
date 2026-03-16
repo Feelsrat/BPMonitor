@@ -9,8 +9,7 @@
     "dev:api": "node dev-server.js",
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
-    "install:all": "npm install && npm --prefix api install && npm --prefix frontend install",
-    "backup": "node backup.js"
+    "install:all": "npm install && npm --prefix api install && npm --prefix frontend install"
   },
   "dependencies": {
     "@upstash/redis": "^1.37.0",
