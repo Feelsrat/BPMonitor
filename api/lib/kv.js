@@ -1,11 +1,18 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import { Redis } from '@upstash/redis';
 
 // Local storage file for development
 const LOCAL_DATA_FILE = join(process.cwd(), 'bp-data.json');
 
-// Check if we're in local development (no Vercel KV env vars)
-const isLocal = !process.env.KV_REST_API_URL;
+// Check if we're in local development (no Upstash env vars)
+const isLocal = !process.env.UPSTASH_REDIS_REST_URL;
+
+// Initialize Redis client (only in production)
+let redis = null;
+if (!isLocal) {
+  redis = Redis.fromEnv();
+}
 
 // Local file-based storage functions
 async function getDataLocal() {
@@ -39,13 +46,12 @@ export async function getData() {
     return await getDataLocal();
   }
 
-  // Use Vercel KV in production
+  // Use Upstash Redis in production
   try {
-    const { kv } = await import('@vercel/kv');
-    const data = await kv.get('bp-entries') || [];
+    const data = await redis.get('bp-entries') || [];
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Error reading from KV:', error);
+    console.error('Error reading from Redis:', error);
     return [];
   }
 }
@@ -59,13 +65,12 @@ export async function saveData(data) {
     return await saveDataLocal(sortedData);
   }
 
-  // Use Vercel KV in production
+  // Use Upstash Redis in production
   try {
-    const { kv } = await import('@vercel/kv');
-    await kv.set('bp-entries', sortedData);
+    await redis.set('bp-entries', sortedData);
     return true;
   } catch (error) {
-    console.error('Error saving to KV:', error);
+    console.error('Error saving to Redis:', error);
     return false;
   }
 }

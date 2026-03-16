@@ -4,6 +4,7 @@
   "description": "Blood Pressure Monitor Vercel Functions API",
   "type": "module",
   "dependencies": {
+    "@upstash/redis": "^1.37.0",
     "@vercel/kv": "^0.2.1",
     "jsonwebtoken": "^9.0.3"
   }
