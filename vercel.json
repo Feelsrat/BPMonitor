@@ -3,6 +3,12 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install && cd api && npm install",
   "framework": null,
+  "crons": [
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 0 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",

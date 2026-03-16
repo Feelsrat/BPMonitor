@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Backups folder
+backups/
+
 # Vercel
 .vercel/
 
