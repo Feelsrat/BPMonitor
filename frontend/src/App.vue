@@ -1,7 +1,18 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Public View (no authentication required) -->
+    <div v-if="isPublicView">
+      <header class="bg-white shadow">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 class="text-2xl font-bold text-gray-800">BP Monitor - Public View</h1>
+          <div class="text-sm text-gray-600">Read-only view</div>
+        </div>
+      </header>
+      <PublicViewTab />
+    </div>
+
     <!-- Login Modal -->
-    <div v-if="!isAuthenticated" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-else-if="!isAuthenticated" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
         <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">BP Monitor</h2>
         <form @submit.prevent="login" class="space-y-4">
@@ -28,14 +39,23 @@
     </div>
 
     <!-- Main App (visible only when authenticated) -->
-    <div v-if="isAuthenticated">
+    <div v-else-if="isAuthenticated">
       <!-- Header -->
       <header class="bg-white shadow">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 class="text-2xl font-bold text-gray-800">BP Monitor</h1>
-          <BaseButton variant="danger" @click="logout">
-            Logout
-          </BaseButton>
+          <div class="flex gap-2">
+            <BaseButton 
+              v-if="activeTab === 'public'" 
+              variant="success" 
+              @click="copyPublicLink"
+            >
+              {{ linkCopied ? '✓ Copied!' : '🔗 Copy Share Link' }}
+            </BaseButton>
+            <BaseButton variant="danger" @click="logout">
+              Logout
+            </BaseButton>
+          </div>
         </div>
       </header>
       
@@ -116,6 +136,8 @@ const isAuthenticated = ref(false);
 const isLoggingIn = ref(false);
 const password = ref('');
 const loginError = ref('');
+const isPublicView = ref(false);
+const linkCopied = ref(false);
 
 const refreshCharts = () => {
   chartsRefreshKey.value += 1;
@@ -158,11 +180,37 @@ const login = async () => {
 const logout = () => {
   setAuthToken(null);
   isAuthenticated.value = false;
+  // Check if we should return to public view
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('view') === 'public') {
+    isPublicView.value = true;
+  }
   password.value = '';
   loginError.value = '';
 };
 
+const copyPublicLink = async () => {
+  const publicUrl = `${window.location.origin}${window.location.pathname}?view=public`
+  try {
+    await navigator.clipboard.writeText(publicUrl)
+    linkCopied.value = true
+    setTimeout(() => {
+      linkCopied.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy link:', err)
+  }
+};
+
 onMounted(() => {
+  // Check if this is a public view request
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('view') === 'public') {
+    isPublicView.value = true;
+    return; // Skip authentication check
+  }
+  
+  // Otherwise check for saved authentication
   const savedToken = localStorage.getItem('authToken');
   if (savedToken) {
     isAuthenticated.value = true;

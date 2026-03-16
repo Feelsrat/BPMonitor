@@ -12,44 +12,73 @@ import autoTable from 'jspdf-autotable'
 export function generateBPReport({ entries, stats, dateRange = 'All Time', patientName = '' }) {
   const doc = new jsPDF()
   
-  // Document settings
+  // Document settings and colors
   const pageWidth = doc.internal.pageSize.width
+  const pageHeight = doc.internal.pageSize.height
   const margin = 20
   let yPos = 20
   
-  // Header
-  doc.setFontSize(20)
+  // Color palette - professional medical colors
+  const colors = {
+    primary: [41, 128, 185],      // Blue
+    success: [46, 204, 113],      // Green
+    warning: [241, 196, 15],      // Yellow
+    danger: [231, 76, 60],        // Red
+    dark: [44, 62, 80],           // Dark blue-gray
+    light: [236, 240, 241],       // Light gray
+    white: [255, 255, 255],
+  }
+  
+  // Add a subtle background color to the page
+  doc.setFillColor(...colors.light)
+  doc.rect(0, 0, pageWidth, 40, 'F')
+  
+  // Header with colored bar
+  doc.setFillColor(...colors.primary)
+  doc.rect(0, 0, pageWidth, 8, 'F')
+  
+  yPos = 18
+  doc.setFontSize(24)
   doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...colors.dark)
   doc.text('Blood Pressure Medical Report', pageWidth / 2, yPos, { align: 'center' })
   
-  yPos += 10
+  yPos += 8
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, pageWidth / 2, yPos, { align: 'center' })
+  doc.setTextColor(100, 100, 100)
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`, pageWidth / 2, yPos, { align: 'center' })
   
   yPos += 15
   
-  // Patient Information Section
+  // Patient Information Section with colored background
+  doc.setFillColor(...colors.light)
+  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 30, 3, 3, 'F')
+  
+  yPos += 8
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.text('Patient Information', margin, yPos)
+  doc.setTextColor(...colors.dark)
+  doc.text('Patient Information', margin + 5, yPos)
   yPos += 8
   
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
+  doc.setTextColor(60, 60, 60)
   if (patientName) {
-    doc.text(`Patient: ${patientName}`, margin, yPos)
+    doc.text(`Patient: ${patientName}`, margin + 5, yPos)
     yPos += 6
   }
-  doc.text(`Report Period: ${dateRange}`, margin, yPos)
+  doc.text(`Report Period: ${dateRange}`, margin + 5, yPos)
   yPos += 6
-  doc.text(`Total Readings: ${entries.length}`, margin, yPos)
+  doc.text(`Total Readings: ${entries.length}`, margin + 5, yPos)
   yPos += 12
   
-  // Summary Statistics
+  // Summary Statistics with visual enhancement
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.text('Summary Statistics', margin, yPos)
+  doc.setTextColor(...colors.dark)
+  doc.text('📊 Summary Statistics', margin, yPos)
   yPos += 8
   
   const summaryData = [
@@ -79,7 +108,25 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     head: [summaryData[0]],
     body: summaryData.slice(1),
     theme: 'grid',
-    headStyles: { fillColor: [66, 139, 202] },
+    headStyles: { 
+      fillColor: colors.primary,
+      fontSize: 11,
+      fontStyle: 'bold',
+      halign: 'center',
+      textColor: colors.white,
+    },
+    bodyStyles: {
+      fontSize: 10,
+    },
+    alternateRowStyles: {
+      fillColor: [245, 247, 250],
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 50 },
+      1: { halign: 'center' },
+      2: { halign: 'center' },
+      3: { halign: 'center' },
+    },
     margin: { left: margin, right: margin },
   })
   
@@ -89,7 +136,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   if (stats.categories) {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('Blood Pressure Categories', margin, yPos)
+    doc.setTextColor(...colors.dark)
+    doc.text('❤️ Blood Pressure Categories', margin, yPos)
     yPos += 8
     
     const categoryData = [
@@ -125,7 +173,36 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       head: [categoryData[0]],
       body: categoryData.slice(1),
       theme: 'striped',
-      headStyles: { fillColor: [66, 139, 202] },
+      headStyles: { 
+        fillColor: colors.primary,
+        fontSize: 11,
+        fontStyle: 'bold',
+        halign: 'center',
+        textColor: colors.white,
+      },
+      bodyStyles: {
+        fontSize: 10,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250],
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        2: { halign: 'center' },
+        3: { halign: 'center', fontStyle: 'bold' },
+      },
+      didParseCell: function(data) {
+        // Color code the rows based on category
+        if (data.section === 'body' && data.column.index === 0) {
+          if (data.cell.text[0] === 'Normal') {
+            data.cell.styles.textColor = colors.success
+          } else if (data.cell.text[0] === 'Elevated') {
+            data.cell.styles.textColor = colors.warning
+          } else if (data.cell.text[0].includes('Stage')) {
+            data.cell.styles.textColor = colors.danger
+          }
+        }
+      },
       margin: { left: margin, right: margin },
     })
     
@@ -142,7 +219,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   if (stats.timeOfDay && stats.timeOfDay.length > 0) {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('Time of Day Analysis', margin, yPos)
+    doc.setTextColor(...colors.dark)
+    doc.text('🕐 Time of Day Analysis', margin, yPos)
     yPos += 8
     
     const timeData = [
@@ -160,7 +238,25 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       head: [timeData[0]],
       body: timeData.slice(1),
       theme: 'striped',
-      headStyles: { fillColor: [66, 139, 202] },
+      headStyles: { 
+        fillColor: colors.primary,
+        fontSize: 11,
+        fontStyle: 'bold',
+        halign: 'center',
+        textColor: colors.white,
+      },
+      bodyStyles: {
+        fontSize: 10,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250],
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+      },
       margin: { left: margin, right: margin },
     })
     
@@ -177,7 +273,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   if (stats.dayOfWeek && stats.dayOfWeek.length > 0) {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('Day of Week Pattern', margin, yPos)
+    doc.setTextColor(...colors.dark)
+    doc.text('📅 Day of Week Pattern', margin, yPos)
     yPos += 8
     
     const dayData = [
@@ -195,7 +292,25 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       head: [dayData[0]],
       body: dayData.slice(1),
       theme: 'striped',
-      headStyles: { fillColor: [66, 139, 202] },
+      headStyles: { 
+        fillColor: colors.primary,
+        fontSize: 11,
+        fontStyle: 'bold',
+        halign: 'center',
+        textColor: colors.white,
+      },
+      bodyStyles: {
+        fontSize: 10,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250],
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', halign: 'center' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+      },
       margin: { left: margin, right: margin },
     })
     
@@ -212,7 +327,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   if (stats.trends) {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('30-Day Trend Analysis', margin, yPos)
+    doc.setTextColor(...colors.dark)
+    doc.text('📈 30-Day Trend Analysis', margin, yPos)
     yPos += 8
     
     const trendData = [
@@ -242,15 +358,39 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       head: [trendData[0]],
       body: trendData.slice(1),
       theme: 'striped',
-      headStyles: { fillColor: [66, 139, 202] },
+      headStyles: { 
+        fillColor: colors.primary,
+        fontSize: 11,
+        fontStyle: 'bold',
+        halign: 'center',
+        textColor: colors.white,
+      },
+      bodyStyles: {
+        fontSize: 10,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250],
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+      },
       margin: { left: margin, right: margin },
     })
     
     yPos = doc.lastAutoTable.finalY + 6
     
     doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Trend Direction: ${stats.trends.change?.direction || 'N/A'}`, margin, yPos)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.dark)
+    const trendText = `Trend Direction: ${stats.trends.change?.direction || 'N/A'}`
+    const trendColor = stats.trends.change?.systolic < 0 ? colors.success : 
+                       stats.trends.change?.systolic > 0 ? colors.danger : colors.dark
+    doc.setTextColor(...trendColor)
+    doc.text(trendText, margin, yPos)
+    doc.setTextColor(...colors.dark)
     yPos += 12
   }
   
@@ -264,7 +404,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('Monthly Comparison', margin, yPos)
+    doc.setTextColor(...colors.dark)
+    doc.text('📊 Monthly Comparison', margin, yPos)
     yPos += 8
     
     const monthlyData = [
@@ -294,15 +435,38 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       head: [monthlyData[0]],
       body: monthlyData.slice(1),
       theme: 'striped',
-      headStyles: { fillColor: [66, 139, 202] },
+      headStyles: { 
+        fillColor: colors.primary,
+        fontSize: 11,
+        fontStyle: 'bold',
+        halign: 'center',
+        textColor: colors.white,
+      },
+      bodyStyles: {
+        fontSize: 10,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250],
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+      },
       margin: { left: margin, right: margin },
     })
     
     yPos = doc.lastAutoTable.finalY + 6
     
     doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Trend Direction: ${stats.monthly.change?.direction || 'N/A'}`, margin, yPos)
+    doc.setFont('helvetica', 'bold')
+    const monthlyTrendText = `Trend Direction: ${stats.monthly.change?.direction || 'N/A'}`
+    const monthlyTrendColor = stats.monthly.change?.systolic < 0 ? colors.success : 
+                              stats.monthly.change?.systolic > 0 ? colors.danger : colors.dark
+    doc.setTextColor(...monthlyTrendColor)
+    doc.text(monthlyTrendText, margin, yPos)
+    doc.setTextColor(...colors.dark)
     yPos += 12
   }
   
@@ -316,7 +480,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('Recent Readings', margin, yPos)
+    doc.setTextColor(...colors.dark)
+    doc.text('📋 Recent Readings', margin, yPos)
     yPos += 8
     
     const recentEntries = entries.slice(0, 20)
@@ -340,30 +505,63 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       head: [readingsData[0]],
       body: readingsData.slice(1),
       theme: 'striped',
-      headStyles: { fillColor: [66, 139, 202] },
+      headStyles: { 
+        fillColor: colors.primary,
+        fontSize: 10,
+        fontStyle: 'bold',
+        halign: 'center',
+        textColor: colors.white,
+      },
+      bodyStyles: {
+        fontSize: 8,
+      },
+      alternateRowStyles: {
+        fillColor: [250, 251, 252],
+      },
+      columnStyles: {
+        2: { halign: 'center', fontStyle: 'bold' },
+        3: { halign: 'center', fontStyle: 'bold' },
+        4: { halign: 'center' },
+      },
       margin: { left: margin, right: margin },
-      styles: { fontSize: 8 },
     })
     
     yPos = doc.lastAutoTable.finalY + 12
   }
   
-  // Footer on all pages
+  // Footer on all pages with professional styling
   const pageCount = doc.internal.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
+    
+    // Add footer bar
+    doc.setFillColor(...colors.primary)
+    doc.rect(0, pageHeight - 15, pageWidth, 15, 'F')
+    
+    // Footer text
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
-    doc.setTextColor(128, 128, 128)
+    doc.setTextColor(255, 255, 255)
     doc.text(
-      `Page ${i} of ${pageCount} | BP Monitor Report | For medical consultation purposes`,
+      `Page ${i} of ${pageCount}`,
+      margin,
+      pageHeight - 7
+    )
+    doc.text(
+      'BP Monitor Medical Report',
       pageWidth / 2,
-      doc.internal.pageSize.height - 10,
+      pageHeight - 7,
       { align: 'center' }
+    )
+    doc.text(
+      'For medical consultation',
+      pageWidth - margin,
+      pageHeight - 7,
+      { align: 'right' }
     )
   }
   
-  // Save the PDF
+  // Save the PDF with timestamp
   const filename = `BP_Report_${new Date().toISOString().split('T')[0]}.pdf`
   doc.save(filename)
 }
