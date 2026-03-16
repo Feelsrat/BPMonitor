@@ -108,114 +108,77 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 import { createEntry } from '../services/api'
 
-export default {
-  name: 'LogBPTab',
-  emits: ['entry-created'],
-  setup(_, { emit }) {
-    const noteTemplates = [
-      'Just woke up',
-      'Before medication',
-      'After medication',
-      'After exercise',
-      'Feeling stressed',
-      'Feeling relaxed',
-      'After meal',
-      'Before bed',
-    ]
-    
-    const form = ref({
-      systolic: '',
-      diastolic: '',
-      pulse: '',
-      notes: '',
+const emit = defineEmits(['entry-created'])
+
+const noteTemplates = [
+  'Just woke up',
+  'Before medication',
+  'After medication',
+  'After exercise',
+  'Feeling stressed',
+  'Feeling relaxed',
+  'After meal',
+  'Before bed',
+]
+
+const form = ref({
+  systolic: '',
+  diastolic: '',
+  pulse: '',
+  notes: '',
+})
+
+const loading = ref(false)
+const successMessage = ref('')
+const errorMessage = ref('')
+
+const resetForm = () => {
+  form.value = {
+    systolic: '',
+    diastolic: '',
+    pulse: '',
+    notes: '',
+  }
+  successMessage.value = ''
+  errorMessage.value = ''
+}
+
+const handleSubmit = async () => {
+  if (!form.value.systolic || !form.value.diastolic || !form.value.pulse) {
+    errorMessage.value = 'Please fill in all required fields'
+    return
+  }
+  
+  loading.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  
+  try {
+    await createEntry({
+      systolic: form.value.systolic,
+      diastolic: form.value.diastolic,
+      pulse: form.value.pulse,
+      notes: form.value.notes || null,
     })
     
-    const loading = ref(false)
-    const successMessage = ref('')
-    const errorMessage = ref('')
+    successMessage.value = '✓ Blood pressure logged successfully!'
+    resetForm()
     
-    const resetForm = () => {
-      form.value = {
-        systolic: '',
-        diastolic: '',
-        pulse: '',
-        notes: '',
-      }
+    // Emit event so parent can refresh charts
+    emit('entry-created')
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => {
       successMessage.value = ''
-      errorMessage.value = ''
-    }
-    
-    const handleSubmit = async () => {
-      if (!form.value.systolic || !form.value.diastolic || !form.value.pulse) {
-        errorMessage.value = 'Please fill in all required fields'
-        return
-      }
-      
-      loading.value = true
-      errorMessage.value = ''
-      successMessage.value = ''
-      
-      try {
-        await createEntry({
-          systolic: form.value.systolic,
-          diastolic: form.value.diastolic,
-          pulse: form.value.pulse,
-          notes: form.value.notes || null,
-        })
-        
-        successMessage.value = '✓ Blood pressure logged successfully!'
-        resetForm()
-        
-        // Emit event so parent can refresh charts
-        emit('entry-created')
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          successMessage.value = ''
-        }, 3000)
-      } catch (err) {
-        errorMessage.value = err.response?.data?.detail || 'Failed to log entry. Please try again.'
-      } finally {
-        loading.value = false
-      }
-    }
-    
-    return {
-      noteTemplates,
-      form,
-      loading,
-      successMessage,
-      errorMessage,
-      resetForm,
-      handleSubmit,
-    }
-  },
-}
-</script>
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          successMessage.value = ''
-        }, 3000)
-      } catch (err) {
-        errorMessage.value = err.response?.data?.detail || 'Failed to log entry. Please try again.'
-      } finally {
-        loading.value = false
-      }
-    }
-    
-    return {
-      form,
-      loading,
-      successMessage,
-      errorMessage,
-      resetForm,
-      handleSubmit,
-    }
-  },
+    }, 3000)
+  } catch (err) {
+    errorMessage.value = err.response?.data?.detail || 'Failed to log entry. Please try again.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>

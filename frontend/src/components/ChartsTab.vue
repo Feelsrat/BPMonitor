@@ -120,7 +120,7 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Line } from 'vue-chartjs'
 import {
@@ -147,206 +147,181 @@ ChartJS.register(
   Filler
 )
 
-export default {
-  name: 'ChartsTab',
-  components: {
-    Line,
-  },
-  setup() {
-    const entries = ref([])
-    const loading = ref(false)
-    const errorMessage = ref('')
-    const selectedFilter = ref('all')
-    
-    const dateFilters = [
-      { label: 'Last 7 Days', value: 7 },
-      { label: 'Last 30 Days', value: 30 },
-      { label: 'Last 90 Days', value: 90 },
-      { label: 'All Time', value: 'all' },
-    ]
-    
-    const filteredEntries = computed(() => {
-      if (selectedFilter.value === 'all') {
-        return entries.value
-      }
-      
-      const now = new Date()
-      const daysAgo = new Date(now.getTime() - selectedFilter.value * 24 * 60 * 60 * 1000)
-      return entries.value.filter(e => new Date(e.timestamp) >= daysAgo)
-    })
-    
-    const lastEntry = computed(() => filteredEntries.value[0])
-    
-    const avgSystolic7d = computed(() => {
-      const now = new Date()
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const recent = filteredEntries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
-      if (recent.length === 0) return '-'
-      const sum = recent.reduce((acc, e) => acc + e.systolic, 0)
-      return Math.round(sum / recent.length)
-    })
-    
-    const avgDiastolic7d = computed(() => {
-      const now = new Date()
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const recent = filteredEntries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
-      if (recent.length === 0) return '-'
-      const sum = recent.reduce((acc, e) => acc + e.diastolic, 0)
-      return Math.round(sum / recent.length)
-    })
-    
-    const chartData = computed(() => {
-      // Sort entries by timestamp (oldest first) for chart
-      const sorted = [...filteredEntries.value].reverse()
-      
-      return {
-        labels: sorted.map(e => formatDate(e.timestamp)),
-        datasets: [
-          {
-            label: 'Systolic (mmHg)',
-            data: sorted.map(e => e.systolic),
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 5,
-            pointHoverRadius: 7,
-            pointBackgroundColor: '#ef4444',
-          },
-          {
-            label: 'Diastolic (mmHg)',
-            data: sorted.map(e => e.diastolic),
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 5,
-            pointHoverRadius: 7,
-            pointBackgroundColor: '#f59e0b',
-          },
-          {
-            label: 'Pulse (BPM)',
-            data: sorted.map(e => e.pulse),
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 5,
-            pointHoverRadius: 7,
-            pointBackgroundColor: '#3b82f6',
-          },
-        ],
-      }
-    })
-    
-    const chartOptions = computed(() => {
-      return {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false,
+const entries = ref([])
+const loading = ref(false)
+const errorMessage = ref('')
+const selectedFilter = ref('all')
+
+const dateFilters = [
+  { label: 'Last 7 Days', value: 7 },
+  { label: 'Last 30 Days', value: 30 },
+  { label: 'Last 90 Days', value: 90 },
+  { label: 'All Time', value: 'all' },
+]
+
+const filteredEntries = computed(() => {
+  if (selectedFilter.value === 'all') {
+    return entries.value
+  }
+  
+  const now = new Date()
+  const daysAgo = new Date(now.getTime() - selectedFilter.value * 24 * 60 * 60 * 1000)
+  return entries.value.filter(e => new Date(e.timestamp) >= daysAgo)
+})
+
+const lastEntry = computed(() => filteredEntries.value[0])
+
+const avgSystolic7d = computed(() => {
+  const now = new Date()
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const recent = filteredEntries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
+  if (recent.length === 0) return '-'
+  const sum = recent.reduce((acc, e) => acc + e.systolic, 0)
+  return Math.round(sum / recent.length)
+})
+
+const avgDiastolic7d = computed(() => {
+  const now = new Date()
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const recent = filteredEntries.value.filter(e => new Date(e.timestamp) >= sevenDaysAgo)
+  if (recent.length === 0) return '-'
+  const sum = recent.reduce((acc, e) => acc + e.diastolic, 0)
+  return Math.round(sum / recent.length)
+})
+
+const chartData = computed(() => {
+  // Sort entries by timestamp (oldest first) for chart
+  const sorted = [...filteredEntries.value].reverse()
+  
+  return {
+    labels: sorted.map(e => formatDate(e.timestamp)),
+    datasets: [
+      {
+        label: 'Systolic (mmHg)',
+        data: sorted.map(e => e.systolic),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: '#ef4444',
+      },
+      {
+        label: 'Diastolic (mmHg)',
+        data: sorted.map(e => e.diastolic),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: '#f59e0b',
+      },
+      {
+        label: 'Pulse (BPM)',
+        data: sorted.map(e => e.pulse),
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: '#3b82f6',
+      },
+    ],
+  }
+})
+
+const chartOptions = computed(() => {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: { size: 12 },
         },
+      },
+      tooltip: {
+        callbacks: {
+          footer: (context) => {
+            const index = context[0].dataIndex
+            const sorted = [...filteredEntries.value].reverse()
+            const entry = sorted[index]
+            return entry?.notes ? `Notes: ${entry.notes}` : ''
+          },
+        },
+      },
+      filler: {
+        propagate: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: false,
+        min: 50,
+        max: 200,
         plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              usePointStyle: true,
-              padding: 15,
-              font: { size: 12 },
-            },
-          },
-          tooltip: {
-            callbacks: {
-              footer: (context) => {
-                const index = context[0].dataIndex
-                const sorted = [...filteredEntries.value].reverse()
-                const entry = sorted[index]
-                return entry?.notes ? `Notes: ${entry.notes}` : ''
-              },
-            },
-          },
           filler: {
-            propagate: false,
+            propagate: true,
           },
         },
-        scales: {
-          y: {
-            beginAtZero: false,
-            min: 50,
-            max: 200,
-            plugins: {
-              filler: {
-                propagate: true,
-              },
-            },
-          },
-        },
-      }
-    })
-    
-    const formatDate = (timestamp) => {
-      if (!timestamp) return '-'
-      const date = new Date(timestamp)
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-    
-    const loadEntries = async () => {
-      loading.value = true
-      errorMessage.value = ''
-      
-      try {
-        const response = await getEntries()
-        entries.value = response.data.results || response.data
-      } catch (err) {
-        errorMessage.value = 'Failed to load entries. Please try again.'
-      } finally {
-        loading.value = false
-      }
-    }
-    
-    const handleExportCSV = async () => {
-      try {
-        const response = await exportCSV()
-        
-        // Create download link
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const link = document.createElement('a')
-        link.href = url
-        link.setAttribute('download', `bp_export_${new Date().toISOString().split('T')[0]}.csv`)
-        document.body.appendChild(link)
-        link.click()
-        link.parentNode.removeChild(link)
-        window.URL.revokeObjectURL(url)
-      } catch (err) {
-        errorMessage.value = 'Failed to export CSV. Please try again.'
-      }
-    }
-    
-    onMounted(() => {
-      loadEntries()
-    })
-    
-    return {
-      entries,
-      loading,
-      errorMessage,
-      selectedFilter,
-      dateFilters,
-      filteredEntries,
-      lastEntry,
-      avgSystolic7d,
-      avgDiastolic7d,
-      chartData,
-      chartOptions,
-      formatDate,
-      loadEntries,
-      handleExportCSV,
-    }
-  },
+      },
+    },
+  }
+})
+
+const formatDate = (timestamp) => {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp)
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
+
+const loadEntries = async () => {
+  loading.value = true
+  errorMessage.value = ''
+  
+  try {
+    const response = await getEntries()
+    entries.value = response.data.results || response.data
+  } catch (err) {
+    errorMessage.value = 'Failed to load entries. Please try again.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleExportCSV = async () => {
+  try {
+    const response = await exportCSV()
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `bp_export_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    link.parentNode.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    errorMessage.value = 'Failed to export CSV. Please try again.'
+  }
+}
+
+onMounted(() => {
+  loadEntries()
+})
 </script>
