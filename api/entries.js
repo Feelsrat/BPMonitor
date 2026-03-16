@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { systolic, diastolic, pulse, notes } = req.body;
+    const { systolic, diastolic, pulse, category, notes } = req.body;
 
     if (!systolic || !diastolic || !pulse) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -30,6 +30,7 @@ export default async function handler(req, res) {
       systolic: parseInt(systolic),
       diastolic: parseInt(diastolic),
       pulse: parseInt(pulse),
+      category: category || '',
       notes: notes || '',
       timestamp: new Date().toISOString()
     };

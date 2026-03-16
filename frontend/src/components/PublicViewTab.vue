@@ -1,6 +1,9 @@
 <template>
   <div class="p-4 md:p-8 max-w-6xl mx-auto">
-    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Charts & Analytics</h2>
+    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">📊 Public Blood Pressure Data</h2>
+      <p class="text-sm text-gray-600">This is a read-only view. You cannot add or modify entries.</p>
+    </div>
     
     <!-- Date Range Filters -->
     <BaseCard padding="p-4" class="mb-6">
@@ -42,7 +45,7 @@
     </div>
     
     <BaseAlert v-if="filteredEntries.length === 0" type="warning">
-      No blood pressure entries in this time range. {{ entries.length > 0 ? 'Try selecting a different time range.' : 'Log some entries to see charts.' }}
+      No blood pressure entries in this time range.
     </BaseAlert>
     
     <div v-else class="space-y-6">
@@ -51,20 +54,6 @@
         <h3 class="text-xl font-bold text-gray-800 mb-4">Blood Pressure Trends</h3>
         <div class="relative h-80 md:h-96">
           <Line :data="chartData" :options="chartOptions" />
-        </div>
-        <div class="mt-4 grid grid-cols-3 gap-2 text-sm md:text-base">
-          <div class="text-center">
-            <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-            <span class="text-gray-600">Normal (&lt;120/&lt;80)</span>
-          </div>
-          <div class="text-center">
-            <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-            <span class="text-gray-600">Elevated (120-139/80-89)</span>
-          </div>
-          <div class="text-center">
-            <span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-            <span class="text-gray-600">High (≥140/≥90)</span>
-          </div>
         </div>
       </BaseCard>
       
@@ -89,7 +78,7 @@
         />
       </div>
       
-      <!-- Table (scrollable on mobile) -->
+      <!-- Table -->
       <BaseCard padding="p-6" class="overflow-x-auto">
         <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Entries</h3>
         <table class="w-full text-sm">
@@ -99,7 +88,6 @@
               <th class="text-right py-2 px-2">Sys/Dia</th>
               <th class="text-right py-2 px-2">Pulse</th>
               <th class="text-left py-2 px-2">Category</th>
-              <th class="text-left py-2 px-2">Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -113,7 +101,6 @@
                 </span>
                 <span v-else class="text-gray-400">-</span>
               </td>
-              <td class="py-2 px-2 text-gray-600">{{ entry.notes ? entry.notes.substring(0, 30) + (entry.notes.length > 30 ? '...' : '') : '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -140,7 +127,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js'
-import { getEntries, exportCSV } from '../services/api'
+import { getEntries } from '../services/api'
 
 ChartJS.register(
   CategoryScale,
@@ -196,7 +183,6 @@ const avgDiastolic7d = computed(() => {
 })
 
 const chartData = computed(() => {
-  // Sort entries by timestamp (oldest first) for chart
   const sorted = [...filteredEntries.value].reverse()
   
   return {
@@ -210,9 +196,6 @@ const chartData = computed(() => {
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        pointBackgroundColor: '#ef4444',
       },
       {
         label: 'Diastolic (mmHg)',
@@ -222,9 +205,6 @@ const chartData = computed(() => {
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        pointBackgroundColor: '#f59e0b',
       },
       {
         label: 'Pulse (BPM)',
@@ -234,9 +214,6 @@ const chartData = computed(() => {
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        pointBackgroundColor: '#3b82f6',
       },
     ],
   }
@@ -246,32 +223,10 @@ const chartOptions = computed(() => {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
     plugins: {
       legend: {
         display: true,
         position: 'top',
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: { size: 12 },
-        },
-      },
-      tooltip: {
-        callbacks: {
-          footer: (context) => {
-            const index = context[0].dataIndex
-            const sorted = [...filteredEntries.value].reverse()
-            const entry = sorted[index]
-            return entry?.notes ? `Notes: ${entry.notes}` : ''
-          },
-        },
-      },
-      filler: {
-        propagate: false,
       },
     },
     scales: {
@@ -279,11 +234,6 @@ const chartOptions = computed(() => {
         beginAtZero: false,
         min: 50,
         max: 200,
-        plugins: {
-          filler: {
-            propagate: true,
-          },
-        },
       },
     },
   }
@@ -311,23 +261,19 @@ const loadEntries = async () => {
 
 const handleExportCSV = async () => {
   try {
-    // Generate CSV from filtered entries
-    const csvHeaders = 'Systolic,Diastolic,Pulse,Category,Notes,Timestamp\n'
+    const csvHeaders = 'Systolic,Diastolic,Pulse,Category,Timestamp\n'
     const csvRows = filteredEntries.value.map(entry => {
       const category = entry.category ? `"${entry.category.replace(/"/g, '""')}"` : ''
-      const notes = entry.notes ? `"${entry.notes.replace(/"/g, '""')}"` : ''
-      return `${entry.systolic},${entry.diastolic},${entry.pulse},${category},${notes},${entry.timestamp}`
+      return `${entry.systolic},${entry.diastolic},${entry.pulse},${category},${entry.timestamp}`
     }).join('\n')
     
     const csvContent = csvHeaders + csvRows
     
-    // Create download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     
-    // Include filter info in filename
     const filterLabel = dateFilters.find(f => f.value === selectedFilter.value)?.label.replace(/\s+/g, '_') || 'all'
     link.setAttribute('download', `bp_export_${filterLabel}_${new Date().toISOString().split('T')[0]}.csv`)
     

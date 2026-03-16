@@ -57,10 +57,24 @@
         </BaseButton>
         <BaseButton
           variant="tab"
+          :active="activeTab === 'analytics'"
+          @click="activeTab = 'analytics'"
+        >
+          📈 Analytics
+        </BaseButton>
+        <BaseButton
+          variant="tab"
           :active="activeTab === 'import'"
           @click="activeTab = 'import'"
         >
           📥 Import
+        </BaseButton>
+        <BaseButton
+          variant="tab"
+          :active="activeTab === 'public'"
+          @click="activeTab = 'public'"
+        >
+          🔗 Public View
         </BaseButton>
       </div>
       
@@ -73,9 +87,15 @@
         v-if="activeTab === 'charts'"
         :key="chartsRefreshKey"
       />
+      <AnalyticsTab 
+        v-if="activeTab === 'analytics'"
+      />
       <ImportTab 
         v-if="activeTab === 'import'"
         @import-complete="onImportComplete"
+      />
+      <PublicViewTab 
+        v-if="activeTab === 'public'"
       />
     </div>
   </div>
@@ -86,6 +106,8 @@ import { ref, onMounted } from 'vue';
 import LogBPTab from './components/LogBPTab.vue';
 import ChartsTab from './components/ChartsTab.vue';
 import ImportTab from './components/ImportTab.vue';
+import PublicViewTab from './components/PublicViewTab.vue';
+import AnalyticsTab from './components/AnalyticsTab.vue';
 import { authenticate, setAuthToken } from './services/api';
 
 const activeTab = ref('log');
