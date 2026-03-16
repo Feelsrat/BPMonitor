@@ -8,10 +8,10 @@ const LOCAL_DATA_FILE = join(process.cwd(), 'bp-data.json');
 // Check if we're in local development (no Upstash env vars)
 const isLocal = !process.env.UPSTASH_REDIS_REST_URL;
 
-// Initialize Redis client (only in production)
-let redis = null;
-if (!isLocal) {
-  redis = Redis.fromEnv();
+// Get Redis client (lazy initialization)
+function getRedisClient() {
+  if (isLocal) return null;
+  return Redis.fromEnv();
 }
 
 // Local file-based storage functions
@@ -48,10 +48,12 @@ export async function getData() {
 
   // Use Upstash Redis in production
   try {
-    const data = await redis.get('bp-entries') || [];
+    const redis = getRedisClient();
+    const data = await redis.get('bp-entries');
+    console.log('📊 Retrieved from Redis:', data ? `${Array.isArray(data) ? data.length : 0} entries` : 'null');
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Error reading from Redis:', error);
+    console.error('❌ Error reading from Redis:', error);
     return [];
   }
 }
@@ -62,15 +64,19 @@ export async function saveData(data) {
 
   // Use local storage in development
   if (isLocal) {
+    console.log('💾 Saving to local file:', sortedData.length, 'entries');
     return await saveDataLocal(sortedData);
   }
 
   // Use Upstash Redis in production
   try {
+    const redis = getRedisClient();
+    console.log('💾 Saving to Redis:', sortedData.length, 'entries');
     await redis.set('bp-entries', sortedData);
+    console.log('✅ Successfully saved to Redis');
     return true;
   } catch (error) {
-    console.error('Error saving to Redis:', error);
+    console.error('❌ Error saving to Redis:', error);
     return false;
   }
 }
