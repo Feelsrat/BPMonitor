@@ -127,6 +127,20 @@ async function commitToGitHub(csv, json, dateStr, entryCount) {
   }
 
   const [owner, repoName] = repo.split('/');
+  
+  // Verify repository exists
+  const repoCheck = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+    },
+  });
+
+  if (!repoCheck.ok) {
+    const error = await repoCheck.text();
+    throw new Error(`Cannot access repository ${repo}: ${repoCheck.status} - ${error}`);
+  }
+
   const baseUrl = `https://api.github.com/repos/${owner}/${repoName}/contents`;
 
   // Upload CSV file
