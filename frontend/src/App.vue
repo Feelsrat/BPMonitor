@@ -131,6 +131,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { authenticate, setAuthToken } from './services/api';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 
 const router = useRouter();
 const route = useRoute();
@@ -226,6 +227,9 @@ watch(() => route.path, (newPath) => {
 });
 
 onMounted(() => {
+  // Initialize Vercel Speed Insights
+  injectSpeedInsights();
+  
   // Check authentication status
   const savedToken = localStorage.getItem('authToken');
   if (savedToken) {
