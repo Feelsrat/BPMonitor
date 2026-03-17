@@ -53,8 +53,8 @@ const buttonClasses = computed(() => {
       ? 'bg-blue-600 text-white px-4 py-2 focus:ring-blue-500'
       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 focus:ring-gray-300',
     tab: props.active
-      ? 'border-b-2 border-blue-600 text-blue-600 px-4 py-3 whitespace-nowrap rounded-none focus:ring-blue-500'
-      : 'text-gray-600 hover:text-gray-800 px-4 py-3 whitespace-nowrap rounded-none focus:ring-gray-300'
+      ? 'border-b-2 border-blue-600 text-blue-600 px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap rounded-none focus:ring-blue-500'
+      : 'text-gray-600 hover:text-gray-800 px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap rounded-none focus:ring-gray-300'
   }
   
   const width = props.fullWidth ? 'w-full' : ''

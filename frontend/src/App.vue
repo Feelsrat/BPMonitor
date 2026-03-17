@@ -51,60 +51,74 @@
     <div v-else-if="isAuthenticated">
       <!-- Header -->
       <header class="bg-white shadow">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 class="text-2xl font-bold text-gray-800">BP Monitor</h1>
-          <div class="flex gap-2">
+        <div class="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
+          <h1 class="text-xl sm:text-2xl font-bold text-gray-800">BP Monitor</h1>
+          <div class="flex gap-1 sm:gap-2">
             <BaseButton 
               v-if="currentRoute === '/public-view'" 
               variant="success" 
               @click="copyPublicLink"
+              class="text-xs sm:text-sm px-2 sm:px-4"
             >
-              {{ linkCopied ? '✓ Copied!' : '🔗 Copy Share Link' }}
+              <span class="hidden sm:inline">{{ linkCopied ? '✓ Copied!' : '🔗 Copy Share Link' }}</span>
+              <span class="sm:hidden">{{ linkCopied ? '✓' : '🔗' }}</span>
             </BaseButton>
-            <BaseButton variant="danger" @click="logout">
-              Logout
+            <BaseButton 
+              variant="danger" 
+              @click="logout"
+              class="text-xs sm:text-sm px-2 sm:px-4"
+            >
+              <span class="hidden sm:inline">Logout</span>
+              <span class="sm:hidden">Exit</span>
             </BaseButton>
           </div>
         </div>
       </header>
       
       <!-- Tab Navigation -->
-      <div class="flex gap-2 bg-white border-b sticky top-0 z-10">
-        <BaseButton
-          variant="tab"
-          :active="currentRoute === '/log'"
-          @click="$router.push('/log')"
-        >
-          📝 Log BP
-        </BaseButton>
-        <BaseButton
-          variant="tab"
-          :active="currentRoute === '/charts'"
-          @click="$router.push('/charts')"
-        >
-          📊 Charts
-        </BaseButton>
-        <BaseButton
-          variant="tab"
-          :active="currentRoute === '/analytics'"
-          @click="$router.push('/analytics')"
-        >
-          📈 Analytics
-        </BaseButton>
-        <BaseButton
-          variant="tab"
-          :active="currentRoute === '/import'"
-          @click="$router.push('/import')"
-        >
-          📥 Import
-        </BaseButton>
-        <BaseButton
-          variant="tab"
-          :active="currentRoute === '/public-view'"
-          @click="$router.push('/public-view')"
-        >
-          🔗 Public View
-        </BaseButton>
+      <div class="overflow-x-auto bg-white border-b sticky top-0 z-10">
+        <div class="flex gap-1 sm:gap-2 min-w-max px-2 sm:px-0">
+          <BaseButton
+            variant="tab"
+            :active="currentRoute === '/log'"
+            @click="$router.push('/log')"
+            class="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <span class="hidden sm:inline">📝 </span>Log
+          </BaseButton>
+          <BaseButton
+            variant="tab"
+            :active="currentRoute === '/charts'"
+            @click="$router.push('/charts')"
+            class="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <span class="hidden sm:inline">📊 </span>Charts
+          </BaseButton>
+          <BaseButton
+            variant="tab"
+            :active="currentRoute === '/analytics'"
+            @click="$router.push('/analytics')"
+            class="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <span class="hidden sm:inline">📈 </span>Analytics
+          </BaseButton>
+          <BaseButton
+            variant="tab"
+            :active="currentRoute === '/import'"
+            @click="$router.push('/import')"
+            class="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <span class="hidden sm:inline">📥 </span>Import
+          </BaseButton>
+          <BaseButton
+            variant="tab"
+            :active="currentRoute === '/public-view'"
+            @click="$router.push('/public-view')"
+            class="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <span class="hidden sm:inline">🔗 </span>Public
+          </BaseButton>
+        </div>
       </div>
       
       <!-- Tab Content -->

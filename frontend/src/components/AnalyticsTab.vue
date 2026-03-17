@@ -27,8 +27,8 @@
     <div v-else class="space-y-6">
       <!-- BP Categories Distribution -->
       <BaseCard>
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Blood Pressure Categories</h3>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Blood Pressure Categories</h3>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div class="text-center p-4 bg-green-50 rounded-lg">
             <div class="text-3xl font-bold text-green-700">{{ stats.categories.normal.count }}</div>
             <div class="text-sm text-green-600">Normal</div>
@@ -58,8 +58,8 @@
       
       <!-- Time of Day Analysis -->
       <BaseCard>
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Average by Time of Day</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Average by Time of Day</h3>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div v-for="period in stats.timeOfDay" :key="period.label" class="text-center p-3 bg-gray-50 rounded-lg">
             <div class="text-lg font-bold text-gray-800">{{ period.avgSystolic }}/{{ period.avgDiastolic }}</div>
             <div class="text-sm text-gray-600">{{ period.label }}</div>
@@ -70,13 +70,13 @@
       
       <!-- Day of Week Analysis -->
       <BaseCard>
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Average by Day of Week</h3>
-        <div class="grid grid-cols-7 gap-2">
+        <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Average by Day of Week</h3>
+        <div class="grid grid-cols-3 sm:grid-cols-7 gap-2">
           <div v-for="day in stats.dayOfWeek" :key="day.label" class="text-center p-2 bg-gray-50 rounded-lg">
             <div class="text-xs font-semibold text-gray-600 mb-1">{{ day.label }}</div>
             <div class="text-sm font-bold text-gray-800">{{ day.avgSystolic }}</div>
             <div class="text-xs text-gray-500">{{ day.avgDiastolic }}</div>
-            <div class="text-xs text-gray-400 mt-1">{{ day.count }}</div>
+            <div class="text-[10px] sm:text-xs text-gray-400 mt-1">{{ day.count }}</div>
           </div>
         </div>
       </BaseCard>

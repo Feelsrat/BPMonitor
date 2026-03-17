@@ -1,7 +1,7 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-8">
+  <div class="max-w-4xl mx-auto px-4 py-4 sm:py-8">
     <BaseCard>
-      <h2 class="text-2xl font-bold text-gray-800 mb-6">📥 Import Data</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">📥 Import Data</h2>
       
       <div class="space-y-4">
         <!-- File Selection -->
@@ -25,36 +25,36 @@
         </div>
 
         <!-- Import Mode Selection -->
-        <div class="grid grid-cols-2 gap-4">
-          <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer" :class="importMode === 'merge' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label class="flex items-center p-3 sm:p-4 border-2 rounded-lg cursor-pointer" :class="importMode === 'merge' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
             <input
               type="radio"
               v-model="importMode"
               value="merge"
-              class="mr-3"
+              class="mr-2 sm:mr-3 flex-shrink-0"
             />
             <div>
-              <div class="font-semibold text-gray-800">Merge Data</div>
-              <div class="text-sm text-gray-600">Add to existing entries (default)</div>
+              <div class="font-semibold text-gray-800 text-sm sm:text-base">Merge Data</div>
+              <div class="text-xs sm:text-sm text-gray-600">Add to existing entries (default)</div>
             </div>
           </label>
           
-          <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer" :class="importMode === 'replace' ? 'border-red-500 bg-red-50' : 'border-gray-200'">
+          <label class="flex items-center p-3 sm:p-4 border-2 rounded-lg cursor-pointer" :class="importMode === 'replace' ? 'border-red-500 bg-red-50' : 'border-gray-200'">
             <input
               type="radio"
               v-model="importMode"
               value="replace"
-              class="mr-3"
+              class="mr-2 sm:mr-3 flex-shrink-0"
             />
             <div>
-              <div class="font-semibold text-gray-800">Replace Data</div>
-              <div class="text-sm text-gray-600">Replace all entries ⚠️</div>
+              <div class="font-semibold text-gray-800 text-sm sm:text-base">Replace Data</div>
+              <div class="text-xs sm:text-sm text-gray-600">Replace all entries ⚠️</div>
             </div>
           </label>
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex gap-4">
+        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <BaseButton
             variant="success"
             :disabled="!selectedFile || isImporting"

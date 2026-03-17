@@ -46,7 +46,7 @@
         </BaseButton>
       </div>
       
-      <div class="flex items-center justify-between mt-3">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-3 gap-2">
         <p class="text-sm text-gray-600">
           Showing {{ filteredEntries.length }} of {{ entries.length }} entries
         </p>
@@ -54,7 +54,7 @@
           variant="success"
           @click="exportPDF"
           :disabled="filteredEntries.length === 0"
-          class="text-sm"
+          class="text-sm w-full sm:w-auto"
         >
           📄 Export PDF
         </BaseButton>
@@ -92,17 +92,17 @@
         <div class="relative h-80 md:h-96">
           <Line :data="chartData" :options="chartOptions" />
         </div>
-        <div class="mt-4 grid grid-cols-3 gap-2 text-sm md:text-base">
-          <div class="text-center">
-            <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm">
+          <div class="flex items-center justify-center sm:justify-center">
+            <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2 flex-shrink-0"></span>
             <span class="text-gray-600">Normal (&lt;120/&lt;80)</span>
           </div>
-          <div class="text-center">
-            <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+          <div class="flex items-center justify-center sm:justify-center">
+            <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-2 flex-shrink-0"></span>
             <span class="text-gray-600">Elevated (120-139/80-89)</span>
           </div>
-          <div class="text-center">
-            <span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+          <div class="flex items-center justify-center sm:justify-center">
+            <span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-2 flex-shrink-0"></span>
             <span class="text-gray-600">High (≥140/≥90)</span>
           </div>
         </div>
@@ -130,9 +130,10 @@
       </div>
       
       <!-- Table (scrollable on mobile) -->
-      <BaseCard padding="p-6" class="overflow-x-auto">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Entries</h3>
-        <table class="w-full text-sm">
+      <BaseCard padding="p-4 sm:p-6">
+        <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Recent Entries</h3>
+        <div class="overflow-x-auto -mx-4 sm:mx-0">
+          <table class="w-full text-xs sm:text-sm min-w-[600px]">
           <thead>
             <tr class="border-b">
               <th class="text-left py-2 px-2">Timestamp</th>
@@ -153,10 +154,11 @@
                 </span>
                 <span v-else class="text-gray-400">-</span>
               </td>
-              <td class="py-2 px-2 text-gray-600">{{ entry.notes ? entry.notes.substring(0, 30) + (entry.notes.length > 30 ? '...' : '') : '-' }}</td>
+              <td class="py-2 px-2 max-w-[200px] truncate">{{ entry.notes || '-' }}</td>
             </tr>
           </tbody>
         </table>
+        </div>
       </BaseCard>
     </div>
     

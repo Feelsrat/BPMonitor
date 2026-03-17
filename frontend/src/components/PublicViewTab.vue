@@ -1,8 +1,8 @@
 <template>
   <div class="p-4 md:p-8 max-w-6xl mx-auto">
-    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <h2 class="text-2xl font-bold text-gray-800 mb-2">📊 Public Blood Pressure Data</h2>
-      <p class="text-sm text-gray-600">This is a read-only view. You cannot add or modify entries.</p>
+    <div class="mb-4 sm:mb-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">📊 Public Blood Pressure Data</h2>
+      <p class="text-xs sm:text-sm text-gray-600">This is a read-only view. You cannot add or modify entries.</p>
     </div>
     
     <!-- Date Range Filters -->
@@ -79,31 +79,33 @@
       </div>
       
       <!-- Table -->
-      <BaseCard padding="p-6" class="overflow-x-auto">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Entries</h3>
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b">
-              <th class="text-left py-2 px-2">Timestamp</th>
-              <th class="text-right py-2 px-2">Sys/Dia</th>
-              <th class="text-right py-2 px-2">Pulse</th>
-              <th class="text-left py-2 px-2">Category</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="entry in filteredEntries.slice(0, 20)" :key="entry.id" class="border-b hover:bg-gray-50">
-              <td class="py-2 px-2">{{ formatDate(entry.timestamp) }}</td>
-              <td class="text-right py-2 px-2">{{ entry.systolic }}/{{ entry.diastolic }}</td>
-              <td class="text-right py-2 px-2">{{ entry.pulse }}</td>
-              <td class="py-2 px-2">
-                <span v-if="entry.category" class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
-                  {{ entry.category }}
-                </span>
-                <span v-else class="text-gray-400">-</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <BaseCard padding="p-4 sm:p-6">
+        <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Recent Entries</h3>
+        <div class="overflow-x-auto -mx-4 sm:mx-0">
+          <table class="w-full text-xs sm:text-sm min-w-[500px]">
+            <thead>
+              <tr class="border-b">
+                <th class="text-left py-2 px-2">Timestamp</th>
+                <th class="text-right py-2 px-2">Sys/Dia</th>
+                <th class="text-right py-2 px-2">Pulse</th>
+                <th class="text-left py-2 px-2">Category</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="entry in filteredEntries.slice(0, 20)" :key="entry.id" class="border-b hover:bg-gray-50">
+                <td class="py-2 px-2">{{ formatDate(entry.timestamp) }}</td>
+                <td class="text-right py-2 px-2">{{ entry.systolic }}/{{ entry.diastolic }}</td>
+                <td class="text-right py-2 px-2">{{ entry.pulse }}</td>
+                <td class="py-2 px-2">
+                  <span v-if="entry.category" class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
+                    {{ entry.category }}
+                  </span>
+                  <span v-else class="text-gray-400">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </BaseCard>
     </div>
     
