@@ -434,6 +434,15 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       caption: 'systolic min-max',
       accent: colors.success,
     })
+    addMetricCard({
+      x: margin + (cardWidth + gap) * 2,
+      y: yPos + 30,
+      width: cardWidth,
+      label: 'Reading Range',
+      value: `${stats.minDiastolic || 'N/A'}-${stats.maxDiastolic || 'N/A'}`,
+      caption: 'diastolic min-max',
+      accent: colors.success,
+    })
 
     yPos += 40
   }
