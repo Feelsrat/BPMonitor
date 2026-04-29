@@ -435,8 +435,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       accent: colors.success,
     })
     addMetricCard({
-      x: margin + (cardWidth + gap) * 2,
-      y: yPos + 30,
+      x: margin + (cardWidth + gap) * 3,
+      y: yPos,
       width: cardWidth,
       label: 'Reading Range',
       value: `${stats.minDiastolic || 'N/A'}-${stats.maxDiastolic || 'N/A'}`,
