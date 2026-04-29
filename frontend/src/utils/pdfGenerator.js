@@ -482,18 +482,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       margin: { left: margin, right: margin },
     })
     
-    yPos = doc.lastAutoTable.finalY + 6
-    
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.dark)
-    const trendText = `Trend Direction: ${sanitizePdfText(stats.trends.change?.direction || 'N/A')}`
-    const trendColor = stats.trends.change?.systolic < 0 ? colors.success : 
-                       stats.trends.change?.systolic > 0 ? colors.danger : colors.dark
-    doc.setTextColor(...trendColor)
-    doc.text(trendText, margin, yPos)
-    doc.setTextColor(...colors.dark)
-    yPos += 14
+    yPos = doc.lastAutoTable.finalY + 14
   }
   
   // Monthly Comparison
@@ -555,17 +544,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       margin: { left: margin, right: margin },
     })
     
-    yPos = doc.lastAutoTable.finalY + 6
-    
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    const monthlyTrendText = `Trend Direction: ${sanitizePdfText(stats.monthly.change?.direction || 'N/A')}`
-    const monthlyTrendColor = stats.monthly.change?.systolic < 0 ? colors.success : 
-                              stats.monthly.change?.systolic > 0 ? colors.danger : colors.dark
-    doc.setTextColor(...monthlyTrendColor)
-    doc.text(monthlyTrendText, margin, yPos)
-    doc.setTextColor(...colors.dark)
-    yPos += 14
+    yPos = doc.lastAutoTable.finalY + 14
   }
   
   // Add medical disclaimer/notes at the end if space permits

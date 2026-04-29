@@ -71,7 +71,6 @@
             <div class="text-center p-4 rounded-lg" :class="trendClass">
               <div class="text-2xl font-bold">{{ stats.trends.change.systolic > 0 ? '+' : '' }}{{ stats.trends.change.systolic }}</div>
               <div class="text-sm">Trend</div>
-              <div class="text-xs">{{ stats.trends.change.direction }}</div>
             </div>
           </div>
         </div>
@@ -93,7 +92,6 @@
             <div class="text-center p-4 rounded-lg" :class="monthlyTrendClass">
               <div class="text-2xl font-bold">{{ stats.monthly.change.systolic > 0 ? '+' : '' }}{{ stats.monthly.change.systolic }}</div>
               <div class="text-sm">Change</div>
-              <div class="text-xs">{{ stats.monthly.change.direction }}</div>
             </div>
           </div>
         </div>
@@ -143,12 +141,12 @@ const stats = computed(() => {
       trends: {
         last30: { avgSystolic: 0, avgDiastolic: 0, count: 0 },
         prev30: { avgSystolic: 0, avgDiastolic: 0, count: 0 },
-        change: { systolic: 0, diastolic: 0, direction: '' },
+        change: { systolic: 0, diastolic: 0 },
       },
       monthly: {
         thisMonth: { avgSystolic: 0, avgDiastolic: 0, count: 0 },
         lastMonth: { avgSystolic: 0, avgDiastolic: 0, count: 0 },
-        change: { systolic: 0, diastolic: 0, direction: '' },
+        change: { systolic: 0, diastolic: 0 },
       },
       yearlyByMonth: [],
     }
@@ -221,15 +219,11 @@ const stats = computed(() => {
       avgDiastolic: prev30.length > 0 ? Math.round(prev30.reduce((sum, e) => sum + e.diastolic, 0) / prev30.length) : 0,
       count: prev30.length,
     },
-    change: { systolic: 0, diastolic: 0, direction: '' },
+    change: { systolic: 0, diastolic: 0 },
   }
   
   trends.change.systolic = trends.last30.avgSystolic - trends.prev30.avgSystolic
   trends.change.diastolic = trends.last30.avgDiastolic - trends.prev30.avgDiastolic
-  
-  if (trends.change.systolic > 0) trends.change.direction = 'Increasing'
-  else if (trends.change.systolic < 0) trends.change.direction = 'Decreasing'
-  else trends.change.direction = 'Stable'
   
   // Monthly comparison (this month vs last month)
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -253,15 +247,11 @@ const stats = computed(() => {
       avgDiastolic: lastMonthEntries.length > 0 ? Math.round(lastMonthEntries.reduce((sum, e) => sum + e.diastolic, 0) / lastMonthEntries.length) : 0,
       count: lastMonthEntries.length,
     },
-    change: { systolic: 0, diastolic: 0, direction: '' },
+    change: { systolic: 0, diastolic: 0 },
   }
   
   monthly.change.systolic = monthly.thisMonth.avgSystolic - monthly.lastMonth.avgSystolic
   monthly.change.diastolic = monthly.thisMonth.avgDiastolic - monthly.lastMonth.avgDiastolic
-  
-  if (monthly.change.systolic > 0) monthly.change.direction = 'Increasing'
-  else if (monthly.change.systolic < 0) monthly.change.direction = 'Decreasing'
-  else monthly.change.direction = 'Stable'
   
   // Yearly by month (last 6 months)
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
