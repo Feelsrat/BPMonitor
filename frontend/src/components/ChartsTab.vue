@@ -282,6 +282,16 @@ const formatChartTick = (value) => {
     : date.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
+const chartYRange = computed(() => {
+  const values = chartEntries.value.flatMap(e => [e.systolic, e.diastolic, e.pulse])
+  if (values.length === 0) return { min: 50, max: 200 }
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  return min === max
+    ? { min: Math.max(0, min - 5), max: max + 5 }
+    : { min, max }
+})
+
 const chartOptions = computed(() => {
   return {
     responsive: true,
@@ -333,8 +343,8 @@ const chartOptions = computed(() => {
       },
       y: {
         beginAtZero: false,
-        min: 50,
-        max: 200,
+        min: chartYRange.value.min,
+        max: chartYRange.value.max,
         ticks: {
           stepSize: 10,
         },

@@ -136,128 +136,216 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     }
 
     let y = addSectionHeader('Trend Snapshot', yPosition)
-    const chartX = margin
-    const chartY = y
     const chartWidth = pageWidth - 2 * margin
-    const chartHeight = 118
-    const plotLeft = chartX + 28
-    const plotTop = chartY + 22
+    const chartHeight = 96
     const plotWidth = chartWidth - 40
-    const plotHeight = 72
+    const plotHeight = 56
 
-    const rawMin = Math.max(0, Math.min(...values) - 10)
-    const rawMax = Math.max(...values) + 10
+    const dataMin = Math.min(...values)
+    const dataMax = Math.max(...values)
     const yStep = 10
-    const minValue = Math.max(0, Math.floor(rawMin / yStep) * yStep)
-    const maxValue = Math.ceil(rawMax / yStep) * yStep
+    const minValue = dataMin === dataMax ? Math.max(0, dataMin - 5) : dataMin
+    const maxValue = dataMin === dataMax ? dataMax + 5 : dataMax
     const valueRange = Math.max(maxValue - minValue, 1)
-    const yTicks = []
-    for (let tick = minValue; tick <= maxValue; tick += yStep) {
-      yTicks.push(tick)
+    const yTicks = [minValue]
+    for (let tick = Math.ceil(minValue / yStep) * yStep; tick < maxValue; tick += yStep) {
+      if (tick !== minValue) {
+        yTicks.push(tick)
+      }
     }
-    const entryTimes = sortedEntries.map(entry => new Date(entry.timestamp).getTime())
-    const hasTimeline = entryTimes.every(Number.isFinite)
-    const firstTime = hasTimeline ? entryTimes[0] : 0
-    const lastTime = hasTimeline ? entryTimes[entryTimes.length - 1] : sortedEntries.length - 1
-    const timeRange = Math.max(lastTime - firstTime, 1)
-    const maxXTicks = sortedEntries.length === 1 ? 1 : 9
-    const xTickTimes = Array.from({ length: maxXTicks }, (_, index) =>
-      maxXTicks === 1 ? firstTime : firstTime + (timeRange / (maxXTicks - 1)) * index
-    )
-    const firstEntryDate = new Date(firstTime).toDateString()
-    const lastEntryDate = new Date(lastTime).toDateString()
-    const useTimeLabels = firstEntryDate === lastEntryDate
-    const formatAxisDate = (timestamp) => {
+    if (maxValue !== minValue) {
+      yTicks.push(maxValue)
+    }
+    const uniqueYTicks = [...new Set(yTicks)]
+    yTicks.length = 0
+    uniqueYTicks.forEach(tick => {
+      yTicks.push(tick)
+    })
+
+    const formatAxisDate = (timestamp, useTimeLabels) => {
       const date = new Date(timestamp)
       return useTimeLabels
         ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
     }
-    const xFor = (timestamp, index) => sortedEntries.length === 1
-      ? plotLeft + plotWidth / 2
-      : plotLeft + (((hasTimeline ? timestamp : index) - firstTime) / timeRange) * plotWidth
-    const yFor = (value) => plotTop + plotHeight - ((value - minValue) / valueRange) * plotHeight
 
-    doc.setDrawColor(...colors.border)
-    doc.setLineWidth(0.25)
-    doc.setFillColor(...colors.surface)
-    doc.roundedRect(chartX, chartY, chartWidth, chartHeight, 3, 3, 'FD')
-    doc.setFillColor(...colors.chartBg)
-    doc.roundedRect(plotLeft, plotTop, plotWidth, plotHeight, 2, 2, 'F')
+    const formatGapDuration = (gapMs) => {
+      const dayMs = 24 * 60 * 60 * 1000
+      const hourMs = 60 * 60 * 1000
+      if (gapMs >= dayMs) {
+        const days = Math.round(gapMs / dayMs)
+        return `${days} day${days === 1 ? '' : 's'}`
+      }
+      const hours = Math.round(gapMs / hourMs)
+      return `${hours} hour${hours === 1 ? '' : 's'}`
+    }
 
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...colors.muted)
-    let legendX = plotLeft
-    valueSeries.forEach(series => {
-      doc.setFillColor(...series.color)
-      doc.circle(legendX, chartY + 8, 1.4, 'F')
-      doc.setTextColor(...colors.muted)
-      doc.text(series.label, legendX + 4, chartY + 10)
-      legendX += 30
+    const entryTimes = sortedEntries.map(entry => new Date(entry.timestamp).getTime())
+    const hasTimeline = entryTimes.every(Number.isFinite)
+    const dayMs = 24 * 60 * 60 * 1000
+    const gaps = hasTimeline
+      ? entryTimes.slice(1).map((time, index) => time - entryTimes[index]).filter(gap => gap > 0)
+      : []
+    const sortedGaps = [...gaps].sort((a, b) => a - b)
+    const medianGap = sortedGaps.length > 0 ? sortedGaps[Math.floor(sortedGaps.length / 2)] : 0
+    const gapThreshold = sortedGaps.length >= 3 ? Math.max(7 * dayMs, medianGap * 3) : 7 * dayMs
+    const segments = []
+
+    sortedEntries.forEach((entry, index) => {
+      if (!hasTimeline || index === 0) {
+        segments.push({ entries: [entry], gapBefore: null })
+        return
+      }
+
+      const gap = entryTimes[index] - entryTimes[index - 1]
+      if (gap > gapThreshold) {
+        segments.push({
+          entries: [entry],
+          gapBefore: {
+            duration: gap,
+            from: entryTimes[index - 1],
+            to: entryTimes[index],
+          },
+        })
+      } else {
+        segments[segments.length - 1].entries.push(entry)
+      }
     })
 
-    doc.setDrawColor(148, 163, 184)
-    doc.setLineWidth(0.35)
-    doc.line(plotLeft, plotTop, plotLeft, plotTop + plotHeight)
-    doc.line(plotLeft, plotTop + plotHeight, plotLeft + plotWidth, plotTop + plotHeight)
-
-    doc.setFontSize(7)
-    doc.setTextColor(...colors.muted)
-    doc.text('mmHg / bpm', chartX + 4, plotTop - 4)
-
-    yTicks.forEach(tick => {
-      const gridY = yFor(tick)
-      doc.setDrawColor(226, 232, 240)
+    const drawGapNote = (gap, yPosition) => {
+      const fromDate = new Date(gap.from).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+      const toDate = new Date(gap.to).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+      const note = `Data gap: ${formatGapDuration(gap.duration)} without readings (${fromDate} to ${toDate})`
+      doc.setDrawColor(...colors.border)
       doc.setLineWidth(0.2)
-      doc.line(plotLeft, gridY, plotLeft + plotWidth, gridY)
-      doc.setDrawColor(148, 163, 184)
-      doc.line(plotLeft - 1.5, gridY, plotLeft, gridY)
-      doc.setFontSize(6.5)
+      doc.setFillColor(...colors.tableStripe)
+      doc.roundedRect(margin, yPosition, chartWidth, 9, 3, 3, 'FD')
+      doc.setFontSize(7.5)
+      doc.setFont('helvetica', 'normal')
       doc.setTextColor(...colors.muted)
-      doc.text(String(tick), plotLeft - 3, gridY + 2, { align: 'right' })
-    })
+      doc.text(note, margin + 5, yPosition + 6)
+      return yPosition + 14
+    }
 
-    xTickTimes.forEach(timestamp => {
-      const gridX = xFor(timestamp, timestamp)
-      doc.setDrawColor(226, 232, 240)
-      doc.setLineWidth(0.2)
-      doc.line(gridX, plotTop, gridX, plotTop + plotHeight)
-      doc.setDrawColor(148, 163, 184)
-      doc.line(gridX, plotTop + plotHeight, gridX, plotTop + plotHeight + 1.5)
+    const drawSegmentChart = (segmentEntries, yPosition, segmentIndex) => {
+      const chartX = margin
+      const chartY = yPosition
+      const plotLeft = chartX + 28
+      const plotTop = chartY + 20
+      const segmentTimes = segmentEntries.map(entry => new Date(entry.timestamp).getTime())
+      const firstTime = hasTimeline ? segmentTimes[0] : 0
+      const lastTime = hasTimeline ? segmentTimes[segmentTimes.length - 1] : segmentEntries.length - 1
+      const timeRange = Math.max(lastTime - firstTime, 1)
+      const maxXTicks = segmentEntries.length === 1 ? 1 : Math.min(6, segmentEntries.length)
+      const xTickTimes = Array.from({ length: maxXTicks }, (_, index) =>
+        maxXTicks === 1 ? firstTime : firstTime + (timeRange / (maxXTicks - 1)) * index
+      )
+      const firstEntryDate = new Date(firstTime).toDateString()
+      const lastEntryDate = new Date(lastTime).toDateString()
+      const useTimeLabels = firstEntryDate === lastEntryDate
+      const xFor = (timestamp, index) => segmentEntries.length === 1
+        ? plotLeft + plotWidth / 2
+        : plotLeft + (((hasTimeline ? timestamp : index) - firstTime) / timeRange) * plotWidth
+      const yFor = (value) => plotTop + plotHeight - ((value - minValue) / valueRange) * plotHeight
+
+      doc.setDrawColor(...colors.border)
+      doc.setLineWidth(0.25)
+      doc.setFillColor(...colors.surface)
+      doc.roundedRect(chartX, chartY, chartWidth, chartHeight, 3, 3, 'FD')
+      doc.setFillColor(...colors.chartBg)
+      doc.roundedRect(plotLeft, plotTop, plotWidth, plotHeight, 2, 2, 'F')
+
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
       doc.setTextColor(...colors.muted)
-      doc.setFontSize(6.5)
-      doc.text(hasTimeline ? formatAxisDate(timestamp) : String(Math.round(timestamp + 1)), gridX, plotTop + plotHeight + 8, { align: 'center' })
-    })
+      doc.text(`Segment ${segmentIndex + 1}`, chartX + 5, chartY + 10)
+      let legendX = plotLeft + 32
+      valueSeries.forEach(series => {
+        doc.setFillColor(...series.color)
+        doc.circle(legendX, chartY + 8, 1.4, 'F')
+        doc.setTextColor(...colors.muted)
+        doc.text(series.label, legendX + 4, chartY + 10)
+        legendX += 30
+      })
 
-    valueSeries.forEach(series => {
-      const points = sortedEntries
+      doc.setDrawColor(148, 163, 184)
+      doc.setLineWidth(0.35)
+      doc.line(plotLeft, plotTop, plotLeft, plotTop + plotHeight)
+      doc.line(plotLeft, plotTop + plotHeight, plotLeft + plotWidth, plotTop + plotHeight)
+
+      doc.setFontSize(7)
+      doc.setTextColor(...colors.muted)
+      doc.text('mmHg / bpm', chartX + 4, plotTop - 4)
+
+      yTicks.forEach(tick => {
+        const gridY = yFor(tick)
+        doc.setDrawColor(226, 232, 240)
+        doc.setLineWidth(0.2)
+        doc.line(plotLeft, gridY, plotLeft + plotWidth, gridY)
+        doc.setDrawColor(148, 163, 184)
+        doc.line(plotLeft - 1.5, gridY, plotLeft, gridY)
+        doc.setFontSize(6.5)
+        doc.setTextColor(...colors.muted)
+        doc.text(String(tick), plotLeft - 3, gridY + 2, { align: 'right' })
+      })
+
+      xTickTimes.forEach((timestamp, index) => {
+        const gridX = xFor(timestamp, index)
+        doc.setDrawColor(226, 232, 240)
+        doc.setLineWidth(0.2)
+        doc.line(gridX, plotTop, gridX, plotTop + plotHeight)
+        doc.setDrawColor(148, 163, 184)
+        doc.line(gridX, plotTop + plotHeight, gridX, plotTop + plotHeight + 1.5)
+        doc.setTextColor(...colors.muted)
+        doc.setFontSize(6.5)
+        doc.text(hasTimeline ? formatAxisDate(timestamp, useTimeLabels) : String(index + 1), gridX, plotTop + plotHeight + 8, { align: 'center' })
+      })
+
+      valueSeries.forEach(series => {
+        const points = segmentEntries
         .map((entry, index) => ({
-          x: xFor(entryTimes[index], index),
+          x: xFor(segmentTimes[index], index),
           y: yFor(Number(entry[series.key])),
           value: Number(entry[series.key]),
         }))
         .filter(point => Number.isFinite(point.value))
 
-      if (points.length === 0) return
+        if (points.length === 0) return
 
-      doc.setDrawColor(...series.color)
-      doc.setLineWidth(1.15)
-      for (let i = 1; i < points.length; i++) {
-        doc.line(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y)
+        doc.setDrawColor(...series.color)
+        doc.setLineWidth(1.15)
+        for (let i = 1; i < points.length; i++) {
+          doc.line(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y)
+        }
+
+        doc.setFillColor(...series.color)
+        points.forEach(point => {
+          doc.circle(point.x, point.y, 0.9, 'F')
+        })
+      })
+
+      doc.setFontSize(7)
+      doc.setTextColor(...colors.muted)
+      doc.text(useTimeLabels && hasTimeline ? new Date(firstTime).toLocaleDateString('en-GB') : hasTimeline ? 'Date' : 'Reading number', plotLeft + plotWidth / 2, chartY + chartHeight - 6, { align: 'center' })
+
+      return yPosition + chartHeight + 10
+    }
+
+    segments.forEach((segment, index) => {
+      const gapHeight = segment.gapBefore ? 14 : 0
+      if (y + gapHeight + chartHeight > pageHeight - 28) {
+        addReportPage()
+        y = 22
       }
 
-      doc.setFillColor(...series.color)
-      points.forEach(point => {
-        doc.circle(point.x, point.y, 0.9, 'F')
-      })
+      if (segment.gapBefore) {
+        y = drawGapNote(segment.gapBefore, y)
+      }
+
+      y = drawSegmentChart(segment.entries, y, index)
     })
 
-    doc.setFontSize(7)
-    doc.setTextColor(...colors.muted)
-    doc.text(useTimeLabels && hasTimeline ? new Date(firstTime).toLocaleDateString('en-GB') : hasTimeline ? 'Date' : 'Reading number', plotLeft + plotWidth / 2, chartY + chartHeight - 6, { align: 'center' })
-
-    return y + chartHeight + 14
+    return y + 4
   }
   
   const generatedAt = new Date()
