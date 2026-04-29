@@ -153,12 +153,17 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     for (let tick = minValue; tick <= maxValue; tick += yStep) {
       yTicks.push(tick)
     }
-    const maxXTicks = Math.min(9, sortedEntries.length)
-    const xTickIndices = Array.from({ length: maxXTicks }, (_, index) =>
-      maxXTicks === 1 ? 0 : Math.round((index / (maxXTicks - 1)) * (sortedEntries.length - 1))
-    ).filter((index, position, all) => all.indexOf(index) === position)
-    const firstEntryDate = new Date(sortedEntries[0].timestamp).toDateString()
-    const lastEntryDate = new Date(sortedEntries[sortedEntries.length - 1].timestamp).toDateString()
+    const entryTimes = sortedEntries.map(entry => new Date(entry.timestamp).getTime())
+    const hasTimeline = entryTimes.every(Number.isFinite)
+    const firstTime = hasTimeline ? entryTimes[0] : 0
+    const lastTime = hasTimeline ? entryTimes[entryTimes.length - 1] : sortedEntries.length - 1
+    const timeRange = Math.max(lastTime - firstTime, 1)
+    const maxXTicks = sortedEntries.length === 1 ? 1 : 9
+    const xTickTimes = Array.from({ length: maxXTicks }, (_, index) =>
+      maxXTicks === 1 ? firstTime : firstTime + (timeRange / (maxXTicks - 1)) * index
+    )
+    const firstEntryDate = new Date(firstTime).toDateString()
+    const lastEntryDate = new Date(lastTime).toDateString()
     const useTimeLabels = firstEntryDate === lastEntryDate
     const formatAxisDate = (timestamp) => {
       const date = new Date(timestamp)
@@ -166,9 +171,9 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
         ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
     }
-    const xFor = (index) => sortedEntries.length === 1
+    const xFor = (timestamp, index) => sortedEntries.length === 1
       ? plotLeft + plotWidth / 2
-      : plotLeft + (index / (sortedEntries.length - 1)) * plotWidth
+      : plotLeft + (((hasTimeline ? timestamp : index) - firstTime) / timeRange) * plotWidth
     const yFor = (value) => plotTop + plotHeight - ((value - minValue) / valueRange) * plotHeight
 
     doc.setDrawColor(...colors.border)
@@ -211,8 +216,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       doc.text(String(tick), plotLeft - 3, gridY + 2, { align: 'right' })
     })
 
-    xTickIndices.forEach(index => {
-      const gridX = xFor(index)
+    xTickTimes.forEach(timestamp => {
+      const gridX = xFor(timestamp, timestamp)
       doc.setDrawColor(226, 232, 240)
       doc.setLineWidth(0.2)
       doc.line(gridX, plotTop, gridX, plotTop + plotHeight)
@@ -220,13 +225,13 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       doc.line(gridX, plotTop + plotHeight, gridX, plotTop + plotHeight + 1.5)
       doc.setTextColor(...colors.muted)
       doc.setFontSize(6.5)
-      doc.text(formatAxisDate(sortedEntries[index].timestamp), gridX, plotTop + plotHeight + 8, { align: 'center' })
+      doc.text(hasTimeline ? formatAxisDate(timestamp) : String(Math.round(timestamp + 1)), gridX, plotTop + plotHeight + 8, { align: 'center' })
     })
 
     valueSeries.forEach(series => {
       const points = sortedEntries
         .map((entry, index) => ({
-          x: xFor(index),
+          x: xFor(entryTimes[index], index),
           y: yFor(Number(entry[series.key])),
           value: Number(entry[series.key]),
         }))
@@ -248,7 +253,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
 
     doc.setFontSize(7)
     doc.setTextColor(...colors.muted)
-    doc.text(useTimeLabels ? new Date(sortedEntries[0].timestamp).toLocaleDateString('en-GB') : 'Date', plotLeft + plotWidth / 2, chartY + chartHeight - 6, { align: 'center' })
+    doc.text(useTimeLabels && hasTimeline ? new Date(firstTime).toLocaleDateString('en-GB') : hasTimeline ? 'Date' : 'Reading number', plotLeft + plotWidth / 2, chartY + chartHeight - 6, { align: 'center' })
 
     return y + chartHeight + 14
   }
