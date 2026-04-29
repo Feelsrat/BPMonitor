@@ -79,20 +79,24 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     const chartX = margin
     const chartY = y
     const chartWidth = pageWidth - 2 * margin
-    const chartHeight = 88
+    const chartHeight = 98
     const plotLeft = chartX + 27
     const plotTop = chartY + 20
     const plotWidth = chartWidth - 38
-    const plotHeight = 44
+    const plotHeight = 54
 
-    const minValue = Math.max(0, Math.floor((Math.min(...values) - 10) / 10) * 10)
-    const maxValue = Math.ceil((Math.max(...values) + 10) / 10) * 10
+    const rawMin = Math.max(0, Math.min(...values) - 10)
+    const rawMax = Math.max(...values) + 10
+    const rawRange = Math.max(rawMax - rawMin, 1)
+    const yStep = Math.max(5, Math.ceil((rawRange / 8) / 5) * 5)
+    const minValue = Math.max(0, Math.floor(rawMin / yStep) * yStep)
+    const maxValue = Math.ceil(rawMax / yStep) * yStep
     const valueRange = Math.max(maxValue - minValue, 1)
-    const yTickCount = 6
-    const yTicks = Array.from({ length: yTickCount }, (_, index) =>
-      Math.round(minValue + (valueRange / (yTickCount - 1)) * index)
-    )
-    const maxXTicks = Math.min(6, sortedEntries.length)
+    const yTicks = []
+    for (let tick = minValue; tick <= maxValue; tick += yStep) {
+      yTicks.push(tick)
+    }
+    const maxXTicks = Math.min(9, sortedEntries.length)
     const xTickIndices = Array.from({ length: maxXTicks }, (_, index) =>
       maxXTicks === 1 ? 0 : Math.round((index / (maxXTicks - 1)) * (sortedEntries.length - 1))
     ).filter((index, position, all) => all.indexOf(index) === position)
@@ -155,6 +159,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       doc.setDrawColor(120, 120, 120)
       doc.line(gridX, plotTop + plotHeight, gridX, plotTop + plotHeight + 1.5)
       doc.setTextColor(90, 90, 90)
+      doc.setFontSize(6.5)
       doc.text(formatAxisDate(sortedEntries[index].timestamp), gridX, plotTop + plotHeight + 8, { align: 'center' })
     })
 
@@ -545,25 +550,6 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     })
     
     yPos = doc.lastAutoTable.finalY + 14
-  }
-  
-  // Add medical disclaimer/notes at the end if space permits
-  if (yPos < pageHeight - 50) {
-    yPos += 10
-    doc.setDrawColor(...colors.border)
-    doc.setLineWidth(0.3)
-    doc.line(margin, yPos, pageWidth - margin, yPos)
-    yPos += 8
-    
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'italic')
-    doc.setTextColor(100, 100, 100)
-    doc.text('Medical Disclaimer:', margin, yPos)
-    yPos += 5
-    doc.setFont('helvetica', 'normal')
-    const disclaimerText = 'This report is for informational purposes only and should not replace professional medical advice. Please consult with your healthcare provider for proper diagnosis and treatment.'
-    const splitText = doc.splitTextToSize(disclaimerText, pageWidth - 2 * margin)
-    doc.text(splitText, margin, yPos)
   }
   
   // Footer on all pages with professional styling
