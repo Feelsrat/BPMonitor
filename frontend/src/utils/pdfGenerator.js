@@ -406,7 +406,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   // At-a-glance metrics
   if (stats.avgSystolic && stats.avgDiastolic) {
     const gap = 5
-    const cardWidth = (pageWidth - 2 * margin - gap * 2) / 3
+    const cardWidth = (pageWidth - 2 * margin - gap * 2) / 4
     addMetricCard({
       x: margin,
       y: yPos,
