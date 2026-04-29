@@ -79,15 +79,32 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     const chartX = margin
     const chartY = y
     const chartWidth = pageWidth - 2 * margin
-    const chartHeight = 70
-    const plotLeft = chartX + 20
-    const plotTop = chartY + 18
-    const plotWidth = chartWidth - 28
-    const plotHeight = 36
+    const chartHeight = 88
+    const plotLeft = chartX + 27
+    const plotTop = chartY + 20
+    const plotWidth = chartWidth - 38
+    const plotHeight = 44
 
     const minValue = Math.max(0, Math.floor((Math.min(...values) - 10) / 10) * 10)
     const maxValue = Math.ceil((Math.max(...values) + 10) / 10) * 10
     const valueRange = Math.max(maxValue - minValue, 1)
+    const yTickCount = 6
+    const yTicks = Array.from({ length: yTickCount }, (_, index) =>
+      Math.round(minValue + (valueRange / (yTickCount - 1)) * index)
+    )
+    const maxXTicks = Math.min(6, sortedEntries.length)
+    const xTickIndices = Array.from({ length: maxXTicks }, (_, index) =>
+      maxXTicks === 1 ? 0 : Math.round((index / (maxXTicks - 1)) * (sortedEntries.length - 1))
+    ).filter((index, position, all) => all.indexOf(index) === position)
+    const firstEntryDate = new Date(sortedEntries[0].timestamp).toDateString()
+    const lastEntryDate = new Date(sortedEntries[sortedEntries.length - 1].timestamp).toDateString()
+    const useTimeLabels = firstEntryDate === lastEntryDate
+    const formatAxisDate = (timestamp) => {
+      const date = new Date(timestamp)
+      return useTimeLabels
+        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+    }
     const xFor = (index) => sortedEntries.length === 1
       ? plotLeft + plotWidth / 2
       : plotLeft + (index / (sortedEntries.length - 1)) * plotWidth
@@ -110,13 +127,6 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       legendX += 30
     })
 
-    doc.setDrawColor(225, 229, 235)
-    doc.setLineWidth(0.2)
-    for (let i = 0; i <= 4; i++) {
-      const gridY = plotTop + (plotHeight / 4) * i
-      doc.line(plotLeft, gridY, plotLeft + plotWidth, gridY)
-    }
-
     doc.setDrawColor(120, 120, 120)
     doc.setLineWidth(0.4)
     doc.line(plotLeft, plotTop, plotLeft, plotTop + plotHeight)
@@ -124,8 +134,29 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
 
     doc.setFontSize(7)
     doc.setTextColor(90, 90, 90)
-    doc.text(String(maxValue), chartX + 4, plotTop + 2)
-    doc.text(String(minValue), chartX + 4, plotTop + plotHeight)
+    doc.text('Value', chartX + 5, plotTop - 3)
+
+    yTicks.forEach(tick => {
+      const gridY = yFor(tick)
+      doc.setDrawColor(225, 229, 235)
+      doc.setLineWidth(0.2)
+      doc.line(plotLeft, gridY, plotLeft + plotWidth, gridY)
+      doc.setDrawColor(120, 120, 120)
+      doc.line(plotLeft - 1.5, gridY, plotLeft, gridY)
+      doc.setTextColor(90, 90, 90)
+      doc.text(String(tick), plotLeft - 3, gridY + 2, { align: 'right' })
+    })
+
+    xTickIndices.forEach(index => {
+      const gridX = xFor(index)
+      doc.setDrawColor(235, 238, 242)
+      doc.setLineWidth(0.2)
+      doc.line(gridX, plotTop, gridX, plotTop + plotHeight)
+      doc.setDrawColor(120, 120, 120)
+      doc.line(gridX, plotTop + plotHeight, gridX, plotTop + plotHeight + 1.5)
+      doc.setTextColor(90, 90, 90)
+      doc.text(formatAxisDate(sortedEntries[index].timestamp), gridX, plotTop + plotHeight + 8, { align: 'center' })
+    })
 
     valueSeries.forEach(series => {
       const points = sortedEntries
@@ -150,14 +181,9 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       })
     })
 
-    const firstDate = new Date(sortedEntries[0].timestamp).toLocaleDateString()
-    const lastDate = new Date(sortedEntries[sortedEntries.length - 1].timestamp).toLocaleDateString()
     doc.setFontSize(7)
     doc.setTextColor(90, 90, 90)
-    doc.text(firstDate, plotLeft, chartY + chartHeight - 6)
-    if (sortedEntries.length > 1) {
-      doc.text(lastDate, plotLeft + plotWidth, chartY + chartHeight - 6, { align: 'right' })
-    }
+    doc.text(useTimeLabels ? new Date(sortedEntries[0].timestamp).toLocaleDateString('en-GB') : 'Date', plotLeft + plotWidth / 2, chartY + chartHeight - 6, { align: 'center' })
 
     return y + chartHeight + 14
   }
