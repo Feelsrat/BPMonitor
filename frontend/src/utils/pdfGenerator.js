@@ -20,20 +20,21 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   
   // Color palette - modern report colors
   const colors = {
-    primary: [37, 99, 235],
-    secondary: [14, 165, 233],
-    success: [22, 163, 74],
-    warning: [217, 119, 6],
-    danger: [220, 38, 38],
-    dark: [15, 23, 42],
-    ink: [30, 41, 59],
-    muted: [100, 116, 139],
-    light: [248, 250, 252],
+    primary: [26, 115, 232],
+    secondary: [66, 133, 244],
+    success: [52, 168, 83],
+    warning: [251, 188, 4],
+    danger: [234, 67, 53],
+    dark: [32, 33, 36],
+    ink: [60, 64, 67],
+    muted: [95, 99, 104],
+    light: [255, 255, 255],
     surface: [255, 255, 255],
-    tableStripe: [248, 250, 252],
-    chartBg: [248, 250, 252],
+    tableStripe: [248, 249, 250],
+    chartBg: [248, 249, 250],
     white: [255, 255, 255],
-    border: [226, 232, 240],
+    border: [218, 220, 224],
+    blueTint: [232, 240, 254],
   }
 
   const sortedEntries = [...entries].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
@@ -44,16 +45,16 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   
   const addSectionHeader = (title, yPosition) => {
     doc.setFillColor(...colors.primary)
-    doc.roundedRect(margin, yPosition - 5, 3, 9, 1.2, 1.2, 'F')
+    doc.circle(margin + 1.8, yPosition - 1.5, 1.8, 'F')
     
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.ink)
-    doc.text(title, margin + 7, yPosition)
+    doc.text(title, margin + 8, yPosition)
     
     doc.setDrawColor(...colors.border)
-    doc.setLineWidth(0.25)
-    doc.line(margin, yPosition + 5, pageWidth - margin, yPosition + 5)
+    doc.setLineWidth(0.2)
+    doc.line(margin, yPosition + 6, pageWidth - margin, yPosition + 6)
     
     return yPosition + 12
   }
@@ -61,17 +62,16 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   const addMetricCard = ({ x, y, width, label, value, caption = '', accent = colors.primary }) => {
     const cardHeight = 26
     doc.setDrawColor(...colors.border)
-    doc.setLineWidth(0.25)
+    doc.setLineWidth(0.2)
     doc.setFillColor(...colors.surface)
     doc.roundedRect(x, y, width, cardHeight, 3, 3, 'FD')
     doc.setFillColor(...accent)
-    doc.roundedRect(x, y, width, 3, 3, 3, 'F')
-    doc.rect(x, y + 1.5, width, 2, 'F')
+    doc.circle(x + 6, y + 8, 1.8, 'F')
 
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.muted)
-    doc.text(label.toUpperCase(), x + 5, y + 9)
+    doc.text(label.toUpperCase(), x + 10, y + 9)
 
     doc.setFontSize(15)
     doc.setFont('helvetica', 'bold')
@@ -89,11 +89,13 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   const tableDefaults = {
     theme: 'plain',
     headStyles: {
-      fillColor: colors.dark,
+      fillColor: colors.tableStripe,
       fontSize: 9,
       fontStyle: 'bold',
       halign: 'center',
-      textColor: colors.white,
+      textColor: colors.ink,
+      lineColor: colors.border,
+      lineWidth: 0.1,
       cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
     },
     bodyStyles: {
@@ -260,63 +262,58 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   
   const generatedAt = new Date()
 
-  // Report masthead
+  // Clean report masthead
   doc.setFillColor(...colors.light)
   doc.rect(0, 0, pageWidth, pageHeight, 'F')
 
-  doc.setFillColor(...colors.dark)
-  doc.rect(0, 0, pageWidth, 46, 'F')
-  doc.setFillColor(...colors.primary)
-  doc.rect(0, 0, 7, 46, 'F')
-
   yPos = 18
-  doc.setFontSize(22)
+  doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...colors.white)
+  doc.setTextColor(...colors.primary)
+  doc.text('BP Monitor', margin, yPos)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...colors.muted)
+  doc.text(
+    `Generated ${generatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at ${generatedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`,
+    pageWidth - margin,
+    yPos,
+    { align: 'right' }
+  )
+
+  yPos = 34
+  doc.setFontSize(24)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...colors.dark)
   doc.text('Blood Pressure Report', margin, yPos)
 
   yPos += 8
-  doc.setFontSize(8)
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(203, 213, 225)
-  doc.text(
-    `Generated ${generatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at ${generatedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`,
-    margin,
-    yPos
-  )
-
-  yPos = 58
-
-  // Report details
-  doc.setDrawColor(...colors.border)
-  doc.setLineWidth(0.25)
-  doc.setFillColor(...colors.surface)
-  doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 23, 3, 3, 'FD')
-
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'bold')
   doc.setTextColor(...colors.muted)
-  doc.text('REPORT PERIOD', margin + 5, yPos + 8)
-  doc.text('TOTAL READINGS', pageWidth - margin - 46, yPos + 8)
-
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(...colors.ink)
-  doc.text(dateRange, margin + 5, yPos + 16)
-  doc.text(String(entries.length), pageWidth - margin - 46, yPos + 16)
+  doc.text(`Report period: ${dateRange}`, margin, yPos)
+  doc.text(`${entries.length} readings`, pageWidth - margin, yPos, { align: 'right' })
 
   if (patientName) {
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...colors.muted)
-    doc.text('PATIENT', pageWidth / 2 - 12, yPos + 8)
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...colors.ink)
-    doc.text(patientName, pageWidth / 2 - 12, yPos + 16)
+    yPos += 6
+    doc.text(`Patient: ${patientName}`, margin, yPos)
   }
 
-  yPos += 32
+  yPos += 8
+  const accentY = yPos
+  const accentParts = [
+    { color: colors.primary, width: 18 },
+    { color: colors.danger, width: 10 },
+    { color: colors.warning, width: 10 },
+    { color: colors.success, width: 14 },
+  ]
+  let accentX = margin
+  accentParts.forEach(part => {
+    doc.setFillColor(...part.color)
+    doc.roundedRect(accentX, accentY, part.width, 2, 1, 1, 'F')
+    accentX += part.width + 2
+  })
+
+  yPos += 14
 
   // At-a-glance metrics
   if (stats.avgSystolic && stats.avgDiastolic) {
