@@ -177,15 +177,20 @@ const avgDiastolic7d = computed(() => {
   return Math.round(sum / recent.length)
 })
 
+const chartEntries = computed(() => {
+  return [...filteredEntries.value]
+    .reverse()
+    .filter(e => Number.isFinite(new Date(e.timestamp).getTime()))
+})
+
 const chartData = computed(() => {
-  const sorted = [...filteredEntries.value].reverse()
+  const sorted = chartEntries.value
   
   return {
-    labels: sorted.map(e => formatDate(e.timestamp)),
     datasets: [
       {
         label: 'Systolic (mmHg)',
-        data: sorted.map(e => e.systolic),
+        data: sorted.map(e => ({ x: new Date(e.timestamp).getTime(), y: e.systolic })),
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         borderWidth: 2,
@@ -194,7 +199,7 @@ const chartData = computed(() => {
       },
       {
         label: 'Diastolic (mmHg)',
-        data: sorted.map(e => e.diastolic),
+        data: sorted.map(e => ({ x: new Date(e.timestamp).getTime(), y: e.diastolic })),
         borderColor: '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
         borderWidth: 2,
@@ -203,7 +208,7 @@ const chartData = computed(() => {
       },
       {
         label: 'Pulse (BPM)',
-        data: sorted.map(e => e.pulse),
+        data: sorted.map(e => ({ x: new Date(e.timestamp).getTime(), y: e.pulse })),
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         borderWidth: 2,
@@ -214,6 +219,17 @@ const chartData = computed(() => {
   }
 })
 
+const formatChartTick = (value) => {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
+  const sorted = chartEntries.value
+  const firstDate = sorted[0] ? new Date(sorted[0].timestamp).toDateString() : ''
+  const lastDate = sorted[sorted.length - 1] ? new Date(sorted[sorted.length - 1].timestamp).toDateString() : ''
+  return firstDate && firstDate === lastDate
+    ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
 const chartOptions = computed(() => {
   return {
     responsive: true,
@@ -223,12 +239,35 @@ const chartOptions = computed(() => {
         display: true,
         position: 'top',
       },
+      tooltip: {
+        callbacks: {
+          title: (context) => {
+            return context[0] ? formatDate(context[0].parsed.x) : ''
+          },
+          label: (context) => {
+            return `${context.dataset.label}: ${context.parsed.y}`
+          },
+        },
+      },
     },
     scales: {
+      x: {
+        type: 'linear',
+        ticks: {
+          maxTicksLimit: 9,
+          callback: (value) => formatChartTick(value),
+        },
+        grid: {
+          color: 'rgba(148, 163, 184, 0.18)',
+        },
+      },
       y: {
         beginAtZero: false,
         min: 50,
         max: 200,
+        ticks: {
+          stepSize: 10,
+        },
       },
     },
   }
