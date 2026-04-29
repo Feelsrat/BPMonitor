@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 md:p-8 max-w-6xl mx-auto">
     <div class="mb-4 sm:mb-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-      <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">📊 Public Blood Pressure Data</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Public Blood Pressure Data</h2>
       <p class="text-xs sm:text-sm text-gray-600">This is a read-only view. You cannot add or modify entries.</p>
     </div>
     
@@ -32,7 +32,7 @@
         @click="loadEntries"
         full-width
       >
-        {{ loading ? 'Loading...' : '🔄 Refresh' }}
+        {{ loading ? 'Loading...' : 'Refresh' }}
       </BaseButton>
       <BaseButton
         variant="success"
@@ -40,7 +40,7 @@
         @click="handleExportCSV"
         full-width
       >
-        📥 Export CSV ({{ filteredEntries.length }})
+        Export CSV ({{ filteredEntries.length }})
       </BaseButton>
     </div>
     
@@ -88,7 +88,6 @@
                 <th class="text-left py-2 px-2">Timestamp</th>
                 <th class="text-right py-2 px-2">Sys/Dia</th>
                 <th class="text-right py-2 px-2">Pulse</th>
-                <th class="text-left py-2 px-2">Category</th>
               </tr>
             </thead>
             <tbody>
@@ -96,12 +95,6 @@
                 <td class="py-2 px-2">{{ formatDate(entry.timestamp) }}</td>
                 <td class="text-right py-2 px-2">{{ entry.systolic }}/{{ entry.diastolic }}</td>
                 <td class="text-right py-2 px-2">{{ entry.pulse }}</td>
-                <td class="py-2 px-2">
-                  <span v-if="entry.category" class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
-                    {{ entry.category }}
-                  </span>
-                  <span v-else class="text-gray-400">-</span>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -263,10 +256,9 @@ const loadEntries = async () => {
 
 const handleExportCSV = async () => {
   try {
-    const csvHeaders = 'Systolic,Diastolic,Pulse,Category,Timestamp\n'
+    const csvHeaders = 'Systolic,Diastolic,Pulse,Timestamp\n'
     const csvRows = filteredEntries.value.map(entry => {
-      const category = entry.category ? `"${entry.category.replace(/"/g, '""')}"` : ''
-      return `${entry.systolic},${entry.diastolic},${entry.pulse},${category},${entry.timestamp}`
+      return `${entry.systolic},${entry.diastolic},${entry.pulse},${entry.timestamp}`
     }).join('\n')
     
     const csvContent = csvHeaders + csvRows

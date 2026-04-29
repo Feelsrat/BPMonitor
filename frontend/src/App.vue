@@ -60,8 +60,8 @@
               @click="copyPublicLink"
               class="text-xs sm:text-sm px-2 sm:px-4"
             >
-              <span class="hidden sm:inline">{{ linkCopied ? '✓ Copied!' : '🔗 Copy Share Link' }}</span>
-              <span class="sm:hidden">{{ linkCopied ? '✓' : '🔗' }}</span>
+              <span class="hidden sm:inline">{{ linkCopied ? 'Copied!' : 'Copy Share Link' }}</span>
+              <span class="sm:hidden">{{ linkCopied ? 'Copied' : 'Share' }}</span>
             </BaseButton>
             <BaseButton 
               variant="danger" 
@@ -84,7 +84,7 @@
             @click="$router.push('/log')"
             class="text-xs sm:text-sm whitespace-nowrap"
           >
-            <span class="hidden sm:inline">📝 </span>Log
+            <span>Log</span>
           </BaseButton>
           <BaseButton
             variant="tab"
@@ -92,7 +92,7 @@
             @click="$router.push('/charts')"
             class="text-xs sm:text-sm whitespace-nowrap"
           >
-            <span class="hidden sm:inline">📊 </span>Charts
+            <span>Charts</span>
           </BaseButton>
           <BaseButton
             variant="tab"
@@ -100,7 +100,7 @@
             @click="$router.push('/analytics')"
             class="text-xs sm:text-sm whitespace-nowrap"
           >
-            <span class="hidden sm:inline">📈 </span>Analytics
+            <span>Analytics</span>
           </BaseButton>
           <BaseButton
             variant="tab"
@@ -108,7 +108,7 @@
             @click="$router.push('/import')"
             class="text-xs sm:text-sm whitespace-nowrap"
           >
-            <span class="hidden sm:inline">📥 </span>Import
+            <span>Import</span>
           </BaseButton>
           <BaseButton
             variant="tab"
@@ -116,7 +116,7 @@
             @click="$router.push('/public-view')"
             class="text-xs sm:text-sm whitespace-nowrap"
           >
-            <span class="hidden sm:inline">🔗 </span>Public
+            <span>Public</span>
           </BaseButton>
         </div>
       </div>

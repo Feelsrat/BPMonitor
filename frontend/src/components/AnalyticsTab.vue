@@ -1,6 +1,6 @@
 <template>
   <div class="p-4 md:p-8 max-w-6xl mx-auto">
-    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">📈 Enhanced Analytics</h2>
+    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Enhanced Analytics</h2>
     
     <div class="flex flex-wrap gap-3 mb-6">
       <BaseButton
@@ -8,7 +8,7 @@
         :loading="loading"
         @click="loadEntries"
       >
-        {{ loading ? 'Loading...' : '🔄 Refresh Data' }}
+        {{ loading ? 'Loading...' : 'Refresh Data' }}
       </BaseButton>
       
       <BaseButton
@@ -16,7 +16,7 @@
         @click="exportPDF"
         :disabled="entries.length === 0"
       >
-        📄 Export PDF Report
+        Export PDF Report
       </BaseButton>
     </div>
     
@@ -25,37 +25,6 @@
     </div>
     
     <div v-else class="space-y-6">
-      <!-- BP Categories Distribution -->
-      <BaseCard>
-        <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Blood Pressure Categories</h3>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div class="text-center p-4 bg-green-50 rounded-lg">
-            <div class="text-3xl font-bold text-green-700">{{ stats.categories.normal.count }}</div>
-            <div class="text-sm text-green-600">Normal</div>
-            <div class="text-xs text-gray-600 mt-1">&lt;120/&lt;80</div>
-            <div class="text-xs text-gray-500">{{ stats.categories.normal.percentage }}%</div>
-          </div>
-          <div class="text-center p-4 bg-yellow-50 rounded-lg">
-            <div class="text-3xl font-bold text-yellow-700">{{ stats.categories.elevated.count }}</div>
-            <div class="text-sm text-yellow-600">Elevated</div>
-            <div class="text-xs text-gray-600 mt-1">120-129/&lt;80</div>
-            <div class="text-xs text-gray-500">{{ stats.categories.elevated.percentage }}%</div>
-          </div>
-          <div class="text-center p-4 bg-orange-50 rounded-lg">
-            <div class="text-3xl font-bold text-orange-700">{{ stats.categories.stage1.count }}</div>
-            <div class="text-sm text-orange-600">Stage 1 Hyper</div>
-            <div class="text-xs text-gray-600 mt-1">130-139/80-89</div>
-            <div class="text-xs text-gray-500">{{ stats.categories.stage1.percentage }}%</div>
-          </div>
-          <div class="text-center p-4 bg-red-50 rounded-lg">
-            <div class="text-3xl font-bold text-red-700">{{ stats.categories.stage2.count }}</div>
-            <div class="text-sm text-red-600">Stage 2+ Hyper</div>
-            <div class="text-xs text-gray-600 mt-1">≥140/≥90</div>
-            <div class="text-xs text-gray-500">{{ stats.categories.stage2.percentage }}%</div>
-          </div>
-        </div>
-      </BaseCard>
-      
       <!-- Time of Day Analysis -->
       <BaseCard>
         <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4">Average by Time of Day</h3>
@@ -142,22 +111,6 @@
           </div>
         </div>
       </BaseCard>
-      
-      <!-- Category Distribution -->
-      <BaseCard>
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Readings by Category</h3>
-        <div v-if="stats.byCategory.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div v-for="cat in stats.byCategory" :key="cat.category" class="text-center p-3 bg-blue-50 rounded-lg">
-            <div class="text-2xl">{{ cat.emoji }}</div>
-            <div class="text-sm font-semibold text-gray-700 mt-1">{{ cat.label }}</div>
-            <div class="text-lg font-bold text-gray-800">{{ cat.count }}</div>
-            <div class="text-xs text-gray-500">{{ cat.percentage }}%</div>
-          </div>
-        </div>
-        <div v-else class="text-center text-gray-500 py-4">
-          No categories assigned yet
-        </div>
-      </BaseCard>
     </div>
   </div>
 </template>
@@ -185,12 +138,6 @@ const loadEntries = async () => {
 const stats = computed(() => {
   if (entries.value.length === 0) {
     return {
-      categories: {
-        normal: { count: 0, percentage: 0 },
-        elevated: { count: 0, percentage: 0 },
-        stage1: { count: 0, percentage: 0 },
-        stage2: { count: 0, percentage: 0 },
-      },
       timeOfDay: [],
       dayOfWeek: [],
       trends: {
@@ -204,37 +151,15 @@ const stats = computed(() => {
         change: { systolic: 0, diastolic: 0, direction: '' },
       },
       yearlyByMonth: [],
-      byCategory: [],
     }
   }
   
-  // BP Categories
-  const categories = {
-    normal: { count: 0, percentage: 0 },
-    elevated: { count: 0, percentage: 0 },
-    stage1: { count: 0, percentage: 0 },
-    stage2: { count: 0, percentage: 0 },
-  }
-  
-  entries.value.forEach(e => {
-    if (e.systolic < 120 && e.diastolic < 80) categories.normal.count++
-    else if (e.systolic >= 120 && e.systolic < 130 && e.diastolic < 80) categories.elevated.count++
-    else if ((e.systolic >= 130 && e.systolic < 140) || (e.diastolic >= 80 && e.diastolic < 90)) categories.stage1.count++
-    else categories.stage2.count++
-  })
-  
-  const total = entries.value.length
-  categories.normal.percentage = Math.round((categories.normal.count / total) * 100)
-  categories.elevated.percentage = Math.round((categories.elevated.count / total) * 100)
-  categories.stage1.percentage = Math.round((categories.stage1.count / total) * 100)
-  categories.stage2.percentage = Math.round((categories.stage2.count / total) * 100)
-  
   // Time of Day
   const timeSlots = {
-    morning: { label: '🌅 Morning (6-12)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
-    afternoon: { label: '☀️ Afternoon (12-18)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
-    evening: { label: '🌆 Evening (18-22)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
-    night: { label: '🌙 Night (22-6)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
+    morning: { label: 'Morning (6-12)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
+    afternoon: { label: 'Afternoon (12-18)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
+    evening: { label: 'Evening (18-22)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
+    night: { label: 'Night (22-6)', entries: [], avgSystolic: 0, avgDiastolic: 0, count: 0 },
   }
   
   entries.value.forEach(e => {
@@ -302,9 +227,9 @@ const stats = computed(() => {
   trends.change.systolic = trends.last30.avgSystolic - trends.prev30.avgSystolic
   trends.change.diastolic = trends.last30.avgDiastolic - trends.prev30.avgDiastolic
   
-  if (trends.change.systolic > 0) trends.change.direction = 'Increasing ⬆️'
-  else if (trends.change.systolic < 0) trends.change.direction = 'Decreasing ⬇️'
-  else trends.change.direction = 'Stable ➡️'
+  if (trends.change.systolic > 0) trends.change.direction = 'Increasing'
+  else if (trends.change.systolic < 0) trends.change.direction = 'Decreasing'
+  else trends.change.direction = 'Stable'
   
   // Monthly comparison (this month vs last month)
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -334,9 +259,9 @@ const stats = computed(() => {
   monthly.change.systolic = monthly.thisMonth.avgSystolic - monthly.lastMonth.avgSystolic
   monthly.change.diastolic = monthly.thisMonth.avgDiastolic - monthly.lastMonth.avgDiastolic
   
-  if (monthly.change.systolic > 0) monthly.change.direction = 'Increasing ⬆️'
-  else if (monthly.change.systolic < 0) monthly.change.direction = 'Decreasing ⬇️'
-  else monthly.change.direction = 'Stable ➡️'
+  if (monthly.change.systolic > 0) monthly.change.direction = 'Increasing'
+  else if (monthly.change.systolic < 0) monthly.change.direction = 'Decreasing'
+  else monthly.change.direction = 'Stable'
   
   // Yearly by month (last 6 months)
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -358,37 +283,12 @@ const stats = computed(() => {
     })
   }
   
-  // By Category
-  const categoryMap = {}
-  entries.value.forEach(e => {
-    if (e.category) {
-      if (!categoryMap[e.category]) {
-        categoryMap[e.category] = 0
-      }
-      categoryMap[e.category]++
-    }
-  })
-  
-  const byCategory = Object.entries(categoryMap).map(([category, count]) => {
-    const emoji = category.split(' ')[0]
-    const label = category.substring(emoji.length + 1)
-    return {
-      category,
-      emoji,
-      label,
-      count,
-      percentage: Math.round((count / entries.value.length) * 100),
-    }
-  }).sort((a, b) => b.count - a.count)
-  
   return {
-    categories,
     timeOfDay,
     dayOfWeek: dayData,
     trends,
     monthly,
     yearlyByMonth,
-    byCategory,
   }
 })
 

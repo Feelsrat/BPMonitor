@@ -40,24 +40,6 @@
       
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">
-          Category / Tags (optional)
-        </label>
-        <div class="flex flex-wrap gap-2">
-          <BaseButton
-            v-for="category in categories"
-            :key="category"
-            variant="small"
-            type="button"
-            :active="form.category === category"
-            @click="form.category = form.category === category ? '' : category"
-          >
-            {{ category }}
-          </BaseButton>
-        </div>
-      </div>
-      
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
           Notes (optional)
         </label>
         
@@ -129,21 +111,10 @@ const noteTemplates = [
   'Before bed',
 ]
 
-const categories = [
-  '🏠 Home',
-  '🏥 Doctor',
-  '💊 Medication',
-  '🏃 Exercise',
-  '💼 Work',
-  '🌙 Sleep',
-  '🍽️ Meal',
-]
-
 const form = ref({
   systolic: '',
   diastolic: '',
   pulse: '',
-  category: '',
   notes: '',
 })
 
@@ -156,7 +127,6 @@ const resetForm = () => {
     systolic: '',
     diastolic: '',
     pulse: '',
-    category: '',
     notes: '',
   }
   successMessage.value = ''
@@ -177,12 +147,11 @@ const handleSubmit = async () => {
     await createEntry({
       systolic: form.value.systolic,
       diastolic: form.value.diastolic,
-      category: form.value.category || null,
       pulse: form.value.pulse,
       notes: form.value.notes || null,
     })
     
-    successMessage.value = '✓ Blood pressure logged successfully!'
+    successMessage.value = 'Blood pressure logged successfully!'
     resetForm()
     
     // Emit event so parent can refresh charts

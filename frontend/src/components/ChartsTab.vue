@@ -33,19 +33,6 @@
         </div>
       </div>
       
-      <h3 class="text-sm font-semibold text-gray-700 mb-3 mt-4">Filter by Category</h3>
-      <div class="flex flex-wrap gap-2 mb-3">
-        <BaseButton
-          v-for="cat in categories"
-          :key="cat.value"
-          variant="filter"
-          :active="selectedCategory === cat.value"
-          @click="selectedCategory = cat.value"
-        >
-          {{ cat.label }}
-        </BaseButton>
-      </div>
-      
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-3 gap-2">
         <p class="text-sm text-gray-600">
           Showing {{ filteredEntries.length }} of {{ entries.length }} entries
@@ -56,7 +43,7 @@
           :disabled="filteredEntries.length === 0"
           class="text-sm w-full sm:w-auto"
         >
-          📄 Export PDF
+          Export PDF
         </BaseButton>
       </div>
     </BaseCard>
@@ -69,7 +56,7 @@
         @click="loadEntries"
         full-width
       >
-        {{ loading ? 'Loading...' : '🔄 Refresh' }}
+        {{ loading ? 'Loading...' : 'Refresh' }}
       </BaseButton>
       <BaseButton
         variant="success"
@@ -77,7 +64,7 @@
         @click="handleExportCSV"
         full-width
       >
-        📥 Export CSV ({{ filteredEntries.length }})
+        Export CSV ({{ filteredEntries.length }})
       </BaseButton>
     </div>
     
@@ -91,20 +78,6 @@
         <h3 class="text-xl font-bold text-gray-800 mb-4">Blood Pressure Trends</h3>
         <div class="relative h-80 md:h-96">
           <Line :data="chartData" :options="chartOptions" />
-        </div>
-        <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm">
-          <div class="flex items-center justify-center sm:justify-center">
-            <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2 flex-shrink-0"></span>
-            <span class="text-gray-600">Normal (&lt;120/&lt;80)</span>
-          </div>
-          <div class="flex items-center justify-center sm:justify-center">
-            <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-2 flex-shrink-0"></span>
-            <span class="text-gray-600">Elevated (120-139/80-89)</span>
-          </div>
-          <div class="flex items-center justify-center sm:justify-center">
-            <span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-2 flex-shrink-0"></span>
-            <span class="text-gray-600">High (≥140/≥90)</span>
-          </div>
         </div>
       </BaseCard>
       
@@ -139,7 +112,6 @@
               <th class="text-left py-2 px-2">Timestamp</th>
               <th class="text-right py-2 px-2">Sys/Dia</th>
               <th class="text-right py-2 px-2">Pulse</th>
-              <th class="text-left py-2 px-2">Category</th>
               <th class="text-left py-2 px-2">Notes</th>
             </tr>
           </thead>
@@ -148,12 +120,6 @@
               <td class="py-2 px-2">{{ formatDate(entry.timestamp) }}</td>
               <td class="text-right py-2 px-2">{{ entry.systolic }}/{{ entry.diastolic }}</td>
               <td class="text-right py-2 px-2">{{ entry.pulse }}</td>
-              <td class="py-2 px-2">
-                <span v-if="entry.category" class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
-                  {{ entry.category }}
-                </span>
-                <span v-else class="text-gray-400">-</span>
-              </td>
               <td class="py-2 px-2 max-w-[200px] truncate">{{ entry.notes || '-' }}</td>
             </tr>
           </tbody>
@@ -200,7 +166,6 @@ const entries = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
 const selectedFilter = ref(7) // Default to Last 7 Days
-const selectedCategory = ref('all') // Filter by category
 const customStartDate = ref('')
 const customEndDate = ref('')
 
@@ -210,17 +175,6 @@ const dateFilters = [
   { label: 'Last 90 Days', value: 90 },
   { label: 'All Time', value: 'all' },
   { label: 'Custom Range', value: 'custom' },
-]
-
-const categories = [
-  { label: 'All Categories', value: 'all' },
-  { label: '🏠 Home', value: '🏠 Home' },
-  { label: '🏥 Doctor', value: '🏥 Doctor' },
-  { label: '💊 Medication', value: '💊 Medication' },
-  { label: '🏃 Exercise', value: '🏃 Exercise' },
-  { label: '💼 Work', value: '💼 Work' },
-  { label: '🌙 Sleep', value: '🌙 Sleep' },
-  { label: '🍽️ Meal', value: '🍽️ Meal' },
 ]
 
 const filteredEntries = computed(() => {
@@ -241,11 +195,6 @@ const filteredEntries = computed(() => {
     const now = new Date()
     const daysAgo = new Date(now.getTime() - selectedFilter.value * 24 * 60 * 60 * 1000)
     filtered = filtered.filter(e => new Date(e.timestamp) >= daysAgo)
-  }
-  
-  // Filter by category
-  if (selectedCategory.value !== 'all') {
-    filtered = filtered.filter(e => e.category === selectedCategory.value)
   }
   
   return filtered
@@ -388,11 +337,10 @@ const loadEntries = async () => {
 const handleExportCSV = async () => {
   try {
     // Generate CSV from filtered entries
-    const csvHeaders = 'Systolic,Diastolic,Pulse,Category,Notes,Timestamp\n'
+    const csvHeaders = 'Systolic,Diastolic,Pulse,Notes,Timestamp\n'
     const csvRows = filteredEntries.value.map(entry => {
-      const category = entry.category ? `"${entry.category.replace(/"/g, '""')}"` : ''
       const notes = entry.notes ? `"${entry.notes.replace(/"/g, '""')}"` : ''
-      return `${entry.systolic},${entry.diastolic},${entry.pulse},${category},${notes},${entry.timestamp}`
+      return `${entry.systolic},${entry.diastolic},${entry.pulse},${notes},${entry.timestamp}`
     }).join('\n')
     
     const csvContent = csvHeaders + csvRows
@@ -434,8 +382,6 @@ const exportPDF = () => {
   
   // Get date range label
   const filterLabel = dateFilters.find(f => f.value === selectedFilter.value)?.label || 'All Time'
-  const categoryLabel = selectedCategory.value === 'all' ? 'All Categories' : categories.find(c => c.value === selectedCategory.value)?.label || ''
-  const dateRangeText = categoryLabel !== 'All Categories' ? `${filterLabel} - ${categoryLabel}` : filterLabel
   
   generateBPReport({
     entries: filteredEntries.value,
@@ -450,7 +396,7 @@ const exportPDF = () => {
       minPulse: Math.min(...pulseValues),
       maxPulse: Math.max(...pulseValues),
     },
-    dateRange: dateRangeText,
+    dateRange: filterLabel,
   })
 }
 

@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 py-4 sm:py-8">
     <BaseCard>
-      <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">📥 Import Data</h2>
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Import Data</h2>
       
       <div class="space-y-4">
         <!-- File Selection -->
@@ -20,7 +20,7 @@
             Click to select CSV or JSON file
           </BaseButton>
           <p v-if="selectedFile" class="text-green-600 mt-2">
-            ✓ Selected: {{ selectedFile.name }}
+            Selected: {{ selectedFile.name }}
           </p>
         </div>
 
@@ -48,7 +48,7 @@
             />
             <div>
               <div class="font-semibold text-gray-800 text-sm sm:text-base">Replace Data</div>
-              <div class="text-xs sm:text-sm text-gray-600">Replace all entries ⚠️</div>
+              <div class="text-xs sm:text-sm text-gray-600">Replace all entries</div>
             </div>
           </label>
         </div>
@@ -62,7 +62,7 @@
             @click="importFileData"
             full-width
           >
-            {{ isImporting ? 'Importing...' : '📤 Import' }}
+            {{ isImporting ? 'Importing...' : 'Import' }}
           </BaseButton>
           <BaseButton
             variant="secondary"
@@ -75,15 +75,15 @@
 
         <!-- Messages -->
         <BaseAlert v-if="successMessage" type="success">
-          ✓ {{ successMessage }}
+          {{ successMessage }}
         </BaseAlert>
         <BaseAlert v-if="errorMessage" type="error">
-          ✗ {{ errorMessage }}
+          {{ errorMessage }}
         </BaseAlert>
 
         <!-- Format Info -->
         <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
-          <div class="font-semibold mb-2">📋 Supported Formats:</div>
+          <div class="font-semibold mb-2">Supported Formats:</div>
           <div class="space-y-1">
             <div><strong>CSV:</strong> Systolic,Diastolic,Pulse,Notes,Timestamp</div>
             <div><strong>JSON:</strong> Array of {systolic, diastolic, pulse, notes, timestamp} objects</div>
