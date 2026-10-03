@@ -1,17 +1,14 @@
-import { generateToken } from './lib/auth.js';
+import { checkPassword, generateToken } from './lib/auth.js';
+import { createHandler } from './lib/handler.js';
 
-export default function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { password } = req.body;
-  const PASSWORD = process.env.PWORD || 'defaultpassword';
-
-  if (password !== PASSWORD) {
-    return res.status(401).json({ error: 'Invalid password' });
-  }
-
-  const token = generateToken();
-  res.status(200).json({ success: true, token });
-}
+export default createHandler({
+  POST(req, res) {
+    if (!process.env.PWORD) {
+      return res.status(500).json({ error: 'Server password is not configured (set PWORD).' });
+    }
+    if (!checkPassword(req.body?.password)) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+    res.status(200).json({ token: generateToken() });
+  },
+}, { auth: false });

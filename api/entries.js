@@ -1,43 +1,28 @@
-import { getData, saveData } from './lib/kv.js';
-import { verifyAuth } from './lib/auth.js';
+import { getEntries, saveEntries } from './lib/kv.js';
+import { createHandler } from './lib/handler.js';
+import { parseReading, idGenerator } from './lib/entries.js';
 
-export default async function handler(req, res) {
-  // Allow GET without auth for health check, but require auth for actual data
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+export default createHandler({
+  async GET(req, res) {
+    res.status(200).json(await getEntries());
+  },
 
-  const auth = verifyAuth(req);
-  if (!auth.valid) {
-    return res.status(401).json({ error: auth.error });
-  }
-
-  if (req.method === 'GET') {
-    const data = await getData();
-    return res.status(200).json(data);
-  }
-
-  if (req.method === 'POST') {
-    const { systolic, diastolic, pulse, category, notes } = req.body;
-
-    if (!systolic || !diastolic || !pulse) {
-      return res.status(400).json({ error: 'Missing required fields' });
+  async POST(req, res) {
+    const reading = parseReading(req.body ?? {});
+    if (!reading) {
+      return res.status(400).json({ error: 'Systolic, diastolic and pulse must be valid numbers' });
     }
 
-    const data = await getData();
-    const newEntry = {
-      id: Date.now(),
-      systolic: parseInt(systolic),
-      diastolic: parseInt(diastolic),
-      pulse: parseInt(pulse),
-      category: category || '',
-      notes: notes || '',
-      timestamp: new Date().toISOString()
+    const entries = await getEntries();
+    const entry = {
+      id: idGenerator(entries)(),
+      notes: '',
+      ...reading,
+      timestamp: new Date().toISOString(),
     };
+    entries.push(entry);
+    await saveEntries(entries);
 
-    data.push(newEntry);
-    await saveData(data);
-
-    return res.status(201).json(newEntry);
-  }
-}
+    res.status(201).json(entry);
+  },
+});

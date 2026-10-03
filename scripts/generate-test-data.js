@@ -1,17 +1,11 @@
 /**
- * Generate test BP data for local development
- * Run with: node scripts/generate-test-data.js
+ * Generate test BP data for local development (overwrites bp-data.json)
+ * Run with: npm run seed
  */
 
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { fileURLToPath } from 'url'
-import { dirname } from 'path'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-// Path to local data file
 const LOCAL_DATA_FILE = join(process.cwd(), 'bp-data.json')
 
 const noteTemplates = [

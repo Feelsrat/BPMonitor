@@ -1,327 +1,103 @@
-# BP Monitor - Blood Pressure Tracking Web App
+# BP Monitor
 
-A secure, single-user blood pressure tracking web application built with Vue 3 (frontend) and Vercel Functions (backend), with automated GitHub backups.
+A single-user blood pressure tracker: Vue 3 frontend, Vercel Functions backend, Upstash Redis storage and optional daily backups to a private GitHub repository.
 
-## ✨ Features
+## Features
 
-- 🔐 **Secure JWT-based authentication** - Password protected login
-- 📊 **Interactive charts with BP reference zones** - Visual indicators for normal/elevated/high BP
-- 📱 **Mobile-responsive design** - Works perfectly on phones, tablets, and desktops
-- 📥 **CSV/JSON export & import** - Download and restore your health data
-- 📈 **Statistics dashboard** - Track trends and patterns
-- 🔄 **Automated backups** - Daily backups to private GitHub repository
-- 🚀 **Serverless deployment** - Scales automatically on Vercel
+- Password-protected login (JWT, valid for 7 days)
+- Log readings with quick note templates
+- Charts with date range filters, CSV export and PDF reports
+- Analytics: time of day, day of week, 30-day and month-over-month trends
+- CSV/JSON import (merge or replace)
+- Shareable read-only page at `/public` (notes are never shown there)
+- Daily GitHub backups via Vercel Cron
 
-## 🛠️ Tech Stack
+## Local development
 
-- **Frontend**: Vue 3 + Vite + Tailwind CSS + Chart.js
-- **Backend**: Vercel Functions (Node.js serverless)
-- **Storage**: Upstash Redis (production) / Local file (development)
-- **Backups**: GitHub API + Vercel Cron
-- **Deployment**: Vercel + GitHub
-- **Auth**: JWT tokens
-
----
-
-## 🚀 Quick Start (2 minutes)
-
-### 1. Install Dependencies
 ```bash
 npm run install:all
-```
-
-### 2. Configure Environment
-```bash
-# Windows (PowerShell)
-Copy-Item .env.example .env
-
-# macOS/Linux
-cp .env.example .env
-```
-
-Edit `.env` and set your password:
-```env
-PWORD=your_password_here
-JWT_SECRET=your_jwt_secret_here
-```
-
-### 3. Start Development Server
-```bash
+cp .env.example .env    # then set PWORD and JWT_SECRET
+npm run seed            # optional: generate ~2 years of test data
 npm run dev
 ```
 
-**Windows PowerShell Issues?** If you get an execution policy error:
-```powershell
-npm.cmd run dev
-# OR
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+- Frontend: http://localhost:5173/
+- API: http://localhost:3001/api/
 
-### 4. Access Your App
+Without Redis credentials the API stores data in `bp-data.json` in the project root.
 
-- **Frontend**: http://localhost:5173/
-- **API**: http://localhost:3001/api/
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start API and frontend |
+| `npm run dev:api` / `npm run dev:frontend` | Start one of them |
+| `npm run build` | Build the frontend |
+| `npm run seed` | Overwrite `bp-data.json` with test data |
 
-Login with the password you set in `.env` ✅
-
----
-
-## 📂 Project Structure
+## Project structure
 
 ```
-BPMonitor/
-├── frontend/               # Vue 3 + Vite frontend
-│   ├── src/
-│   │   ├── components/    # Vue components (LogBP, Charts, Import)
-│   │   ├── services/      # API client (axios)
-│   │   └── App.vue        # Main app component
-│   ├── package.json
-│   └── vite.config.js
-├── api/                    # Vercel Functions (serverless backend)
-│   ├── lib/
-│   │   ├── auth.js        # JWT authentication
-│   │   └── kv.js          # Redis/local storage abstraction
-│   ├── cron/
-│   │   └── backup.js      # Automated GitHub backup
-│   ├── entries/
-│   │   ├── [id].js        # Update/delete entry
-│   │   ├── export.js      # CSV export
-│   │   └── import.js      # CSV/JSON import
-│   ├── auth.js            # Login endpoint
-│   ├── health.js          # Health check
-│   ├── entries.js         # CRUD operations
-│   └── package.json
-├── dev-server.js          # Local development server
-├── .env                   # Environment variables (local dev)
-├── .env.example           # Environment template
-├── vercel.json            # Vercel configuration
-└── package.json           # Root package configuration
+api/                    Vercel Functions
+  lib/                  auth, storage (Redis / local file), validation, handler wrapper
+  entries/              [id] (PATCH/DELETE), export (CSV), import
+  cron/backup.js        daily GitHub backup
+  auth.js entries.js public.js health.js
+frontend/src/
+  components/           tabs, BPChart, base/ (auto-registered Base* components)
+  services/api.js       axios client and auth token handling
+  utils/                stats helpers and PDF report
+dev-server.js           runs the api/ functions locally with Express
 ```
 
----
-
-## 📡 API Endpoints
+## API
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/auth/` | ❌ | Login (get JWT token) |
-| GET | `/api/health/` | ❌ | Health check |
-| GET | `/api/entries/` | ✅ | Get all BP entries |
-| POST | `/api/entries/` | ✅ | Create new entry |
-| PATCH | `/api/entries/:id/` | ✅ | Update entry |
-| DELETE | `/api/entries/:id/` | ✅ | Delete entry |
-| GET | `/api/entries/export/` | ✅ | Export as CSV |
-| POST | `/api/entries/import/` | ✅ | Import CSV/JSON |
-| GET | `/api/cron/backup` | 🔑 | Trigger backup (secret required) |
+| POST | `/api/auth/` | – | Log in with `{ password }`, returns `{ token }` |
+| GET | `/api/health/` | – | Health check |
+| GET | `/api/public/` | – | Readings without notes, for the public page |
+| GET | `/api/entries/` | ✓ | All readings, newest first |
+| POST | `/api/entries/` | ✓ | Create `{ systolic, diastolic, pulse, notes? }` |
+| PATCH | `/api/entries/:id/` | ✓ | Update fields of a reading |
+| DELETE | `/api/entries/:id/` | ✓ | Delete a reading |
+| GET | `/api/entries/export/` | ✓ | All readings as CSV |
+| POST | `/api/entries/import/` | ✓ | Import `{ entries, mode: 'merge' \| 'replace' }` |
+| GET | `/api/cron/backup` | `CRON_SECRET` | Run the GitHub backup |
 
----
+## Deploying to Vercel
 
-## 📦 Deploy to Vercel
+1. Import the repository in Vercel; `vercel.json` sets the build and install commands.
+2. Add the Upstash Redis integration from the Vercel Marketplace. It sets `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or the `BP_KV_REST_API_*` equivalents).
+3. Set environment variables:
+   - `PWORD`: login password (required; login is refused when unset)
+   - `JWT_SECRET`: token signing secret (falls back to `PWORD`)
+   - `CRON_SECRET`, `GITHUB_TOKEN`, `GITHUB_BACKUP_REPO`: for backups
 
-### Prerequisites
-- GitHub account
-- Vercel account (free tier works)
-- Node.js 18+
+### GitHub backups
 
-### Step 1: Push to GitHub
+Vercel Cron calls `/api/cron/backup` daily at midnight UTC. It writes the readings as `YYYY-MM-DD.json` to `GITHUB_BACKUP_REPO` (`owner/repo`), and skips the commit when nothing changed since the last backup. The JSON files can be imported directly from the Import tab.
 
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/yourusername/bp-monitor.git
-git push -u origin main
-```
+1. Create a private repository for the backups.
+2. Create a fine-grained GitHub token with **Contents: read and write** on that repository only.
+3. Set `GITHUB_TOKEN`, `GITHUB_BACKUP_REPO` and a random `CRON_SECRET` in Vercel. Vercel sends the secret with cron requests automatically.
 
-### Step 2: Deploy with Vercel
+## Import formats
 
-1. Go to [vercel.com](https://vercel.com)
-2. Click "New Project"
-3. Import your GitHub repository
-4. Vercel auto-detects settings ✅
-5. Click "Deploy"
+CSV needs a header row; columns are matched by name and `Notes` is optional:
 
-### Step 3: Add Environment Variables
-
-In Vercel Dashboard → **Project Settings → Environment Variables**:
-
-```
-PWORD=your_secure_password
-JWT_SECRET=your_jwt_secret
-CRON_SECRET=your_cron_secret
-GITHUB_TOKEN=your_github_token (for backups)
-GITHUB_BACKUP_REPO=username/repo-name (for backups)
-```
-
-### Step 4: Connect Upstash Redis
-
-1. Go to [Vercel Marketplace](https://vercel.com/integrations/upstash)
-2. Install Upstash integration
-3. Create Redis database
-4. Environment variables are auto-added ✅
-
-### Step 5: Done! 🎉
-
-Your app is live at `https://your-project.vercel.app`
-
----
-
-## 💾 Data Backup & Import
-
-### Automated GitHub Backups
-
-See [GITHUB_BACKUP.md](./GITHUB_BACKUP.md) for setup instructions.
-
-**Features:**
-- ✅ Automatic daily backups (midnight UTC)
-- ✅ Change detection (only backs up if data changed)
-- ✅ JSON format (directly importable)
-- ✅ Version controlled in private GitHub repository
-
-### Manual Export
-
-1. Open app → **Charts** tab
-2. Click **Export CSV**
-3. Save file to your computer
-
-**Export formats:**
-- CSV (for spreadsheets)
-- JSON (via API endpoint directly)
-
-### Import Data
-
-1. Go to **Import** tab
-2. Select your CSV or JSON file
-3. Choose mode:
-   - **Merge**: Add to existing entries
-   - **Replace**: Overwrite all data (⚠️ careful!)
-4. Click **Import**
-
-**Supported file formats:**
-
-**CSV:**
 ```csv
 Systolic,Diastolic,Pulse,Notes,Timestamp
 120,80,72,Morning reading,2024-01-15T08:30:00Z
 130,85,75,"After exercise, feeling good",2024-01-15T14:45:00Z
 ```
 
-**JSON:**
-```json
-[
-  {
-    "systolic": 120,
-    "diastolic": 80,
-    "pulse": 72,
-    "notes": "Morning reading",
-    "timestamp": "2024-01-15T08:30:00Z"
-  }
-]
-```
+JSON is an array of `{ systolic, diastolic, pulse, notes, timestamp }` objects. Readings outside plausible ranges or with invalid timestamps are skipped, and merging skips readings that already exist.
 
----
+## Security notes
 
-## 🔧 Development
+- Every route except `/auth`, `/health` and `/public` requires a token.
+- The `/public` page shows all readings (without notes) to anyone with the link.
+- Changing `JWT_SECRET` (or `PWORD`, if `JWT_SECRET` is unset) invalidates all existing tokens.
 
-### Quick Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start both servers (frontend + API) |
-| `npm run dev:api` | Start API server only |
-| `npm run dev:frontend` | Start frontend only |
-| `npm run build` | Build for production |
-| `npm run install:all` | Install all dependencies |
-
-### Local Data Storage
-
-- **Development**: Uses `bp-data.json` file in project root
-- **Production**: Uses Upstash Redis (configured in Vercel)
-- Auto-switches based on environment ✅
-
-### Environment Variables
-
-**Local (.env):**
-```env
-PWORD=your_password
-JWT_SECRET=your_jwt_secret
-NODE_ENV=development
-```
-
-**Production (Vercel):**
-- Same as above, plus:
-- `UPSTASH_REDIS_REST_URL` (auto-configured)
-- `UPSTASH_REDIS_REST_TOKEN` (auto-configured)
-- `CRON_SECRET` (for backup endpoint)
-- `GITHUB_TOKEN` (for backups)
-- `GITHUB_BACKUP_REPO` (for backups)
-
----
-
-## 🐛 Troubleshooting
-
-### Can't Log In
-1. Check `.env` file has correct `PWORD`
-2. Restart dev server: `Ctrl+C` then `npm run dev`
-3. Clear browser localStorage (DevTools → Application → Storage)
-
-### PowerShell Execution Policy Error
-```powershell
-# Option 1: Use npm.cmd
-npm.cmd run dev
-
-# Option 2: Fix policy (run as Administrator)
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### Port Already in Use
-```powershell
-# Windows: Kill process on port
-Get-Process -Id (Get-NetTCPConnection -LocalPort 3001).OwningProcess | Stop-Process
-
-# Or close terminal and restart
-```
-
-### API Not Responding
-1. Verify API is running: http://localhost:3001/api/health/
-2. Check terminal for error messages
-3. Ensure `.env` file exists
-
-### Data Not Persisting on Vercel
-1. Check Upstash Redis integration is installed
-2. Verify environment variables are set
-3. Check Vercel deployment logs
-
-### Import Not Working
-- Ensure CSV has correct headers: `Systolic,Diastolic,Pulse,Notes,Timestamp`
-- Check that commas in notes are properly quoted
-- Try JSON format instead if CSV fails
-
----
-
-## 🔐 Security Notes
-
-- ✅ All API routes require JWT authentication (except `/auth` and `/health`)
-- ✅ JWT tokens expire after 7 days
-- ✅ Password stored in environment variables only
-- ✅ Data encrypted at rest (Upstash Redis)
-- ✅ HTTPS enforced on Vercel
-- ⚠️ Single password for all users (single-user app by design)
-- ⚠️ Change `PWORD` to invalidate all existing tokens
-
----
-
-## 📄 License
+## License
 
 MIT
-
----
-
-## 🆘 Support
-
-Need help?
-1. Check this README thoroughly
-2. Review [GITHUB_BACKUP.md](./GITHUB_BACKUP.md) for backup setup
-3. Check browser console for errors
-4. Review Vercel deployment logs

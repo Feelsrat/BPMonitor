@@ -1,101 +1,43 @@
+// Local stand-in for Vercel: serves the functions in api/ on port 3001.
+import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import dotenv from 'dotenv';
+import { isLocal } from './api/lib/kv.js';
+import auth from './api/auth.js';
+import health from './api/health.js';
+import publicEntries from './api/public.js';
+import entries from './api/entries.js';
+import entryById from './api/entries/[id].js';
+import exportEntries from './api/entries/export.js';
+import importEntries from './api/entries/import.js';
 
-// Load environment variables from .env file
-dotenv.config();
-
-// Import API handlers
-import authHandler from './api/auth.js';
-import healthHandler from './api/health.js';
-import entriesHandler from './api/entries.js';
-import entriesIdHandler from './api/entries/[id].js';
-import exportHandler from './api/entries/export.js';
-import importHandler from './api/entries/import.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const app = express();
 const PORT = 3001;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+const routes = {
+  '/api/auth': auth,
+  '/api/health': health,
+  '/api/public': publicEntries,
+  '/api/entries': entries,
+  '/api/entries/export': exportEntries,
+  '/api/entries/import': importEntries,
+  '/api/entries/:id': entryById,
+};
 
-// Create mock request/response for handlers
-const createMockReq = (req) => ({
-  ...req,
-  query: req.query || {},
-  body: req.body || {},
-  headers: req.headers || {},
-  method: req.method,
-  path: req.path
-});
+const app = express();
+app.use(express.json({ limit: '10mb' }));
+app.set('strict routing', false);
 
-// Routes
-app.get('/api/health/', (req, res) => {
-  healthHandler(createMockReq(req), res);
-});
+for (const [path, handler] of Object.entries(routes)) {
+  app.all(path, (req, res) => {
+    // Vercel exposes dynamic path segments through req.query
+    req.query = { ...req.query, ...req.params };
+    return handler(req, res);
+  });
+}
 
-app.post('/api/auth/', (req, res) => {
-  authHandler(createMockReq(req), res);
-});
-
-app.get('/api/entries/', (req, res) => {
-  entriesHandler(createMockReq(req), res);
-});
-
-app.post('/api/entries/', (req, res) => {
-  entriesHandler(createMockReq(req), res);
-});
-
-app.get('/api/entries/export/', (req, res) => {
-  exportHandler(createMockReq(req), res);
-});
-
-app.post('/api/entries/import/', (req, res) => {
-  importHandler(createMockReq(req), res);
-});
-
-app.patch('/api/entries/:id/', (req, res) => {
-  req.query = req.query || {};
-  req.query.id = req.params.id;
-  entriesIdHandler(createMockReq(req), res);
-});
-
-app.delete('/api/entries/:id/', (req, res) => {
-  req.query = req.query || {};
-  req.query.id = req.params.id;
-  entriesIdHandler(createMockReq(req), res);
-});
-
-// Health check
 app.listen(PORT, () => {
-  const password = process.env.PWORD || 'changeme';
-  const storageMode = process.env.KV_REST_API_URL ? 'Vercel KV' : 'Local File (bp-data.json)';
-  
-  console.log(`
-✅ BP Monitor Dev Server Running!
-
-🌐 Frontend:  http://localhost:5173/
-⚙️  API:      http://localhost:${PORT}/api/
-🔐 Password:  ${password}
-💾 Storage:   ${storageMode}
-
-📝 API Endpoints:
-   POST   /api/auth/
-   GET    /api/health/
-   GET    /api/entries/
-   POST   /api/entries/
-   PATCH  /api/entries/:id/
-   DELETE /api/entries/:id/
-   GET    /api/entries/export/
-   POST   /api/entries/import/
-
-💡 Tip: Run tests with curl or Postman
-   Example: curl http://localhost:${PORT}/api/health/
-  `);
+  console.log(`BP Monitor API running at http://localhost:${PORT}/api/`);
+  console.log(`Storage: ${isLocal ? 'local file (bp-data.json)' : 'Upstash Redis'}`);
+  if (!process.env.PWORD) {
+    console.warn('Warning: PWORD is not set, login will fail. Copy .env.example to .env.');
+  }
 });

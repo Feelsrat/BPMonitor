@@ -1,42 +1,37 @@
-import { getData, saveData } from '../lib/kv.js';
-import { verifyAuth } from '../lib/auth.js';
+import { getEntries, saveEntries } from '../lib/kv.js';
+import { createHandler } from '../lib/handler.js';
+import { parseReading } from '../lib/entries.js';
 
-export default async function handler(req, res) {
-  const auth = verifyAuth(req);
-  if (!auth.valid) {
-    return res.status(401).json({ error: auth.error });
-  }
+// Compare as strings so ids stored as floats by older imports still match
+const findIndex = (entries, id) => entries.findIndex(e => String(e.id) === String(id));
 
-  const { id } = req.query;
+export default createHandler({
+  async PATCH(req, res) {
+    const changes = parseReading(req.body ?? {}, { partial: true });
+    if (!changes) {
+      return res.status(400).json({ error: 'Invalid reading values' });
+    }
 
-  if (req.method === 'PATCH') {
-    const { systolic, diastolic, pulse, notes } = req.body;
-    const data = await getData();
-    const entryIndex = data.findIndex(e => e.id === parseInt(id));
-
-    if (entryIndex === -1) {
+    const entries = await getEntries();
+    const index = findIndex(entries, req.query.id);
+    if (index === -1) {
       return res.status(404).json({ error: 'Entry not found' });
     }
 
-    data[entryIndex] = {
-      ...data[entryIndex],
-      ...(systolic && { systolic: parseInt(systolic) }),
-      ...(diastolic && { diastolic: parseInt(diastolic) }),
-      ...(pulse && { pulse: parseInt(pulse) }),
-      ...(notes !== undefined && { notes })
-    };
+    entries[index] = { ...entries[index], ...changes };
+    await saveEntries(entries);
+    res.status(200).json(entries[index]);
+  },
 
-    await saveData(data);
-    return res.status(200).json(data[entryIndex]);
-  }
+  async DELETE(req, res) {
+    const entries = await getEntries();
+    const index = findIndex(entries, req.query.id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
 
-  if (req.method === 'DELETE') {
-    let data = await getData();
-    data = data.filter(e => e.id !== parseInt(id));
-    await saveData(data);
-
-    return res.status(200).json({ message: 'Entry deleted' });
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
-}
+    entries.splice(index, 1);
+    await saveEntries(entries);
+    res.status(200).json({ message: 'Entry deleted' });
+  },
+});

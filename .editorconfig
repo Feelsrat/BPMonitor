@@ -1,6 +1,4 @@
-# EditorConfig - Consistent coding styles across editors
 # See https://editorconfig.org
-
 root = true
 
 [*]
@@ -13,9 +11,3 @@ trim_trailing_whitespace = true
 
 [*.md]
 trim_trailing_whitespace = false
-
-[*.{js,vue,json}]
-indent_size = 2
-
-[*.py]
-indent_size = 4

@@ -2,94 +2,50 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { Redis } from '@upstash/redis';
 
-// Local storage file for development
+const ENTRIES_KEY = 'bp-entries';
+
+// Accept the standard Upstash env vars or the BP_-prefixed ones from the Vercel integration
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.BP_KV_REST_API_TOKEN;
+
+// Without Redis credentials (local development), entries live in bp-data.json
+// and any other keys only in memory.
+export const isLocal = !redisUrl;
 const LOCAL_DATA_FILE = join(process.cwd(), 'bp-data.json');
+const memory = new Map();
 
-// Check if we're in local development (check for any Redis env vars)
-const isLocal = !(process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL);
+const redis = isLocal ? null : new Redis({ url: redisUrl, token: redisToken });
 
-// Get Redis client (lazy initialization)
-function getRedisClient() {
-  if (isLocal) return null;
-  
-  // Try standard Upstash env vars first, then fall back to BP_ prefixed vars
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.BP_KV_REST_API_TOKEN;
-  
-  if (!url || !token) {
-    console.error('❌ Redis credentials not found in environment variables');
-    return null;
-  }
-  
-  return new Redis({
-    url,
-    token,
-  });
-}
-
-// Local file-based storage functions
-async function getDataLocal() {
+async function readLocalEntries() {
   try {
-    const fileContent = await fs.readFile(LOCAL_DATA_FILE, 'utf8');
-    return JSON.parse(fileContent);
+    return JSON.parse(await fs.readFile(LOCAL_DATA_FILE, 'utf8'));
   } catch (error) {
-    if (error.code === 'ENOENT') {
-      return []; // File doesn't exist yet
-    }
-    console.error('Error reading local data:', error);
-    return [];
+    if (error.code === 'ENOENT') return [];
+    throw error;
   }
 }
 
-async function saveDataLocal(data) {
-  try {
-    await fs.writeFile(LOCAL_DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
-    return true;
-  } catch (error) {
-    console.error('Error saving local data:', error);
-    return false;
-  }
+export async function getValue(key) {
+  if (redis) return redis.get(key);
+  return key === ENTRIES_KEY ? readLocalEntries() : memory.get(key) ?? null;
 }
 
-// KV utilities for data storage
-export async function getData() {
-  // Use local storage in development
-  if (isLocal) {
-    console.log('📁 Using local file storage (development mode)');
-    return await getDataLocal();
+export async function setValue(key, value) {
+  if (redis) return redis.set(key, value);
+  if (key === ENTRIES_KEY) {
+    return fs.writeFile(LOCAL_DATA_FILE, JSON.stringify(value, null, 2), 'utf8');
   }
-
-  // Use Upstash Redis in production
-  try {
-    const redis = getRedisClient();
-    const data = await redis.get('bp-entries');
-    console.log('📊 Retrieved from Redis:', data ? `${Array.isArray(data) ? data.length : 0} entries` : 'null');
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.error('❌ Error reading from Redis:', error);
-    return [];
-  }
+  memory.set(key, value);
 }
 
-export async function saveData(data) {
-  // Sort data before saving
-  const sortedData = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+// Errors propagate on purpose: treating a failed read as "no entries" and then
+// saving would wipe the stored data.
+export async function getEntries() {
+  const entries = await getValue(ENTRIES_KEY);
+  return Array.isArray(entries) ? entries : [];
+}
 
-  // Use local storage in development
-  if (isLocal) {
-    console.log('💾 Saving to local file:', sortedData.length, 'entries');
-    return await saveDataLocal(sortedData);
-  }
-
-  // Use Upstash Redis in production
-  try {
-    const redis = getRedisClient();
-    console.log('💾 Saving to Redis:', sortedData.length, 'entries');
-    await redis.set('bp-entries', sortedData);
-    console.log('✅ Successfully saved to Redis');
-    return true;
-  } catch (error) {
-    console.error('❌ Error saving to Redis:', error);
-    return false;
-  }
+export async function saveEntries(entries) {
+  entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  await setValue(ENTRIES_KEY, entries);
 }

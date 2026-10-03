@@ -9,15 +9,12 @@
     "dev:api": "node dev-server.js",
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
+    "seed": "node scripts/generate-test-data.js",
     "install:all": "npm install && npm --prefix api install && npm --prefix frontend install"
   },
-  "dependencies": {
-    "@upstash/redis": "^1.37.0",
-    "cors": "^2.8.5",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
     "dotenv": "^17.3.1",
     "express": "^4.18.2"
-  },
-  "devDependencies": {
-    "concurrently": "^9.2.1"
   }
 }

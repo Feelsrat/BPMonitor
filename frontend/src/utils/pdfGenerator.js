@@ -1,23 +1,23 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
+import { average } from './bp'
+
 /**
- * Generate a polished PDF report for blood pressure data
- * @param {Object} options - PDF generation options
+ * Generate and download a PDF report for blood pressure data
+ * @param {Object} options
  * @param {Array} options.entries - BP entries to include
- * @param {Object} options.stats - Pre-calculated statistics
- * @param {string} options.dateRange - Date range string (e.g., "Last 30 days")
- * @param {string} options.patientName - Optional patient name
+ * @param {string} options.dateRange - Label for the report period (e.g. "Last 30 Days")
+ * @param {Object} [options.analytics] - Result of computeAnalytics(); adds pattern and trend tables
  */
-export function generateBPReport({ entries, stats, dateRange = 'All Time', patientName = '' }) {
+export function generateBPReport({ entries, dateRange = 'All Time', analytics = null }) {
   const doc = new jsPDF()
-  
-  // Document settings and colors
+
   const pageWidth = doc.internal.pageSize.width
   const pageHeight = doc.internal.pageSize.height
   const margin = 20
   let yPos = 20
-  
+
   // Color palette - modern report colors
   const colors = {
     primary: [26, 115, 232],
@@ -28,34 +28,34 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     dark: [32, 33, 36],
     ink: [60, 64, 67],
     muted: [95, 99, 104],
-    light: [255, 255, 255],
     surface: [255, 255, 255],
     tableStripe: [248, 249, 250],
-    chartBg: [248, 249, 250],
-    white: [255, 255, 255],
     border: [218, 220, 224],
-    blueTint: [232, 240, 254],
   }
 
   const sortedEntries = [...entries].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-  const sanitizePdfText = (value) => String(value ?? '')
-    .replace(/[^\x20-\x7E]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  
+
+  const range = (field) => {
+    const values = entries.map(e => e[field])
+    return { avg: average(entries, field), min: Math.min(...values), max: Math.max(...values) }
+  }
+  const systolic = range('systolic')
+  const diastolic = range('diastolic')
+  const pulse = range('pulse')
+
   const addSectionHeader = (title, yPosition) => {
     doc.setFillColor(...colors.primary)
     doc.circle(margin + 1.8, yPosition - 1.5, 1.8, 'F')
-    
+
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...colors.ink)
     doc.text(title, margin + 8, yPosition)
-    
+
     doc.setDrawColor(...colors.border)
     doc.setLineWidth(0.2)
     doc.line(margin, yPosition + 6, pageWidth - margin, yPosition + 6)
-    
+
     return yPosition + 12
   }
 
@@ -86,7 +86,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     }
   }
 
-  const tableDefaults = {
+  const tableStyles = {
     theme: 'plain',
     headStyles: {
       fillColor: colors.tableStripe,
@@ -111,10 +111,29 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     margin: { left: margin, right: margin },
   }
 
-  const addReportPage = () => {
+  // Start a new page when fewer than `space` mm remain above the footer
+  const ensureSpace = (y, space) => {
+    if (y + space <= pageHeight - 28) return y
     doc.addPage()
-    doc.setFillColor(...colors.light)
-    doc.rect(0, 0, pageWidth, pageHeight, 'F')
+    return 22
+  }
+
+  const addTable = (title, head, body, columnStyles = {}) => {
+    yPos = addSectionHeader(title, ensureSpace(yPos, 50))
+    autoTable(doc, {
+      ...tableStyles,
+      startY: yPos,
+      head: [head],
+      body,
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+        ...columnStyles,
+      },
+    })
+    yPos = doc.lastAutoTable.finalY + 14
   }
 
   const addTrendSnapshot = (yPosition) => {
@@ -147,20 +166,11 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     const minValue = dataMin === dataMax ? Math.max(0, dataMin - 5) : dataMin
     const maxValue = dataMin === dataMax ? dataMax + 5 : dataMax
     const valueRange = Math.max(maxValue - minValue, 1)
-    const yTicks = [minValue]
+    // Round-number grid lines plus the exact min and max, skipping ones whose labels would overlap
+    const yTicks = new Set([minValue, maxValue])
     for (let tick = Math.ceil(minValue / yStep) * yStep; tick < maxValue; tick += yStep) {
-      if (tick !== minValue) {
-        yTicks.push(tick)
-      }
+      if (tick - minValue >= yStep / 2 && maxValue - tick >= yStep / 2) yTicks.add(tick)
     }
-    if (maxValue !== minValue) {
-      yTicks.push(maxValue)
-    }
-    const uniqueYTicks = [...new Set(yTicks)]
-    yTicks.length = 0
-    uniqueYTicks.forEach(tick => {
-      yTicks.push(tick)
-    })
 
     const formatAxisDate = (timestamp, useTimeLabels) => {
       const date = new Date(timestamp)
@@ -169,8 +179,8 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
         : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
     }
 
+    const dayMs = 24 * 60 * 60 * 1000
     const formatGapDuration = (gapMs) => {
-      const dayMs = 24 * 60 * 60 * 1000
       const hourMs = 60 * 60 * 1000
       if (gapMs >= dayMs) {
         const days = Math.round(gapMs / dayMs)
@@ -182,7 +192,6 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
 
     const entryTimes = sortedEntries.map(entry => new Date(entry.timestamp).getTime())
     const hasTimeline = entryTimes.every(Number.isFinite)
-    const dayMs = 24 * 60 * 60 * 1000
     const gaps = hasTimeline
       ? entryTimes.slice(1).map((time, index) => time - entryTimes[index]).filter(gap => gap > 0)
       : []
@@ -252,7 +261,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
       doc.setLineWidth(0.25)
       doc.setFillColor(...colors.surface)
       doc.roundedRect(chartX, chartY, chartWidth, chartHeight, 3, 3, 'FD')
-      doc.setFillColor(...colors.chartBg)
+      doc.setFillColor(...colors.tableStripe)
       doc.roundedRect(plotLeft, plotTop, plotWidth, plotHeight, 2, 2, 'F')
 
       doc.setFontSize(8)
@@ -303,12 +312,12 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
 
       valueSeries.forEach(series => {
         const points = segmentEntries
-        .map((entry, index) => ({
-          x: xFor(segmentTimes[index], index),
-          y: yFor(Number(entry[series.key])),
-          value: Number(entry[series.key]),
-        }))
-        .filter(point => Number.isFinite(point.value))
+          .map((entry, index) => ({
+            x: xFor(segmentTimes[index], index),
+            y: yFor(Number(entry[series.key])),
+            value: Number(entry[series.key]),
+          }))
+          .filter(point => Number.isFinite(point.value))
 
         if (points.length === 0) return
 
@@ -332,11 +341,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
     }
 
     segments.forEach((segment, index) => {
-      const gapHeight = segment.gapBefore ? 14 : 0
-      if (y + gapHeight + chartHeight > pageHeight - 28) {
-        addReportPage()
-        y = 22
-      }
+      y = ensureSpace(y, (segment.gapBefore ? 14 : 0) + chartHeight)
 
       if (segment.gapBefore) {
         y = drawGapNote(segment.gapBefore, y)
@@ -347,13 +352,11 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
 
     return y + 4
   }
-  
+
   const generatedAt = new Date()
+  const formatDay = (date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  // Clean report masthead
-  doc.setFillColor(...colors.light)
-  doc.rect(0, 0, pageWidth, pageHeight, 'F')
-
+  // Masthead
   yPos = 18
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
@@ -362,7 +365,7 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...colors.muted)
   doc.text(
-    `Generated ${generatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at ${generatedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`,
+    `Generated ${formatDay(generatedAt)} at ${generatedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`,
     pageWidth - margin,
     yPos,
     { align: 'right' }
@@ -381,397 +384,80 @@ export function generateBPReport({ entries, stats, dateRange = 'All Time', patie
   doc.text(`Report period: ${dateRange}`, margin, yPos)
   doc.text(`${entries.length} readings`, pageWidth - margin, yPos, { align: 'right' })
 
-  if (patientName) {
-    yPos += 6
-    doc.text(`Patient: ${patientName}`, margin, yPos)
-  }
-
   yPos += 8
-  const accentY = yPos
-  const accentParts = [
+  let accentX = margin
+  ;[
     { color: colors.primary, width: 18 },
     { color: colors.danger, width: 10 },
     { color: colors.warning, width: 10 },
     { color: colors.success, width: 14 },
-  ]
-  let accentX = margin
-  accentParts.forEach(part => {
+  ].forEach(part => {
     doc.setFillColor(...part.color)
-    doc.roundedRect(accentX, accentY, part.width, 2, 1, 1, 'F')
+    doc.roundedRect(accentX, yPos, part.width, 2, 1, 1, 'F')
     accentX += part.width + 2
   })
-
   yPos += 14
 
   // At-a-glance metrics
-  if (stats.avgSystolic && stats.avgDiastolic) {
-    const gap = 5
-    const cardWidth = (pageWidth - 2 * margin - gap * 2) / 4
-    addMetricCard({
-      x: margin,
-      y: yPos,
-      width: cardWidth,
-      label: 'Average BP',
-      value: `${stats.avgSystolic}/${stats.avgDiastolic}`,
-      caption: 'mmHg',
-      accent: colors.primary,
-    })
-    addMetricCard({
-      x: margin + cardWidth + gap,
-      y: yPos,
-      width: cardWidth,
-      label: 'Average Pulse',
-      value: stats.avgPulse || 'N/A',
-      caption: stats.avgPulse ? 'bpm' : '',
-      accent: colors.secondary,
-    })
-    addMetricCard({
-      x: margin + (cardWidth + gap) * 2,
-      y: yPos,
-      width: cardWidth,
-      label: 'Reading Range',
-      value: `${stats.minSystolic || 'N/A'}-${stats.maxSystolic || 'N/A'}`,
-      caption: 'systolic min-max',
-      accent: colors.success,
-    })
-    addMetricCard({
-      x: margin + (cardWidth + gap) * 3,
-      y: yPos,
-      width: cardWidth,
-      label: 'Reading Range',
-      value: `${stats.minDiastolic || 'N/A'}-${stats.maxDiastolic || 'N/A'}`,
-      caption: 'diastolic min-max',
-      accent: colors.success,
-    })
+  const cardGap = 5
+  const cardWidth = (pageWidth - 2 * margin - cardGap * 3) / 4
+  ;[
+    { label: 'Average BP', value: `${systolic.avg}/${diastolic.avg}`, caption: 'mmHg', accent: colors.primary },
+    { label: 'Average Pulse', value: pulse.avg, caption: 'bpm', accent: colors.secondary },
+    { label: 'Reading Range', value: `${systolic.min}-${systolic.max}`, caption: 'systolic min-max', accent: colors.success },
+    { label: 'Reading Range', value: `${diastolic.min}-${diastolic.max}`, caption: 'diastolic min-max', accent: colors.success },
+  ].forEach((card, index) => {
+    addMetricCard({ ...card, x: margin + (cardWidth + cardGap) * index, y: yPos, width: cardWidth })
+  })
+  yPos += 40
 
-    yPos += 40
-  }
-  
   yPos = addTrendSnapshot(yPos)
 
-  if (yPos > 225) {
-    addReportPage()
-    yPos = 22
+  addTable('Summary Statistics', ['Metric', 'Average', 'Minimum', 'Maximum'], [
+    ['Systolic (mmHg)', systolic.avg, systolic.min, systolic.max],
+    ['Diastolic (mmHg)', diastolic.avg, diastolic.min, diastolic.max],
+    ['Pulse (bpm)', pulse.avg, pulse.min, pulse.max],
+  ], { 0: { fontStyle: 'bold', cellWidth: 50 } })
+
+  if (analytics) {
+    const orNA = (group, value) => (group.count > 0 ? value : 'N/A')
+    const groupRow = (label, group) =>
+      [label, group.count, orNA(group, group.avgSystolic), orNA(group, group.avgDiastolic)]
+    const signed = (value) => (value > 0 ? `+${value}` : value)
+    const comparisonRows = ({ current, previous, change }, currentLabel, previousLabel) => {
+      const comparable = current.count > 0 && previous.count > 0
+      return [
+        groupRow(currentLabel, current),
+        groupRow(previousLabel, previous),
+        ['Change', '-', comparable ? signed(change.systolic) : 'N/A', comparable ? signed(change.diastolic) : 'N/A'],
+      ]
+    }
+    const columns = (first) => [first, 'Readings', 'Avg Systolic', 'Avg Diastolic']
+
+    addTable('Time of Day Analysis', columns('Period'), analytics.timeOfDay.map(slot => groupRow(slot.label, slot)))
+    addTable('Day of Week Pattern', columns('Day'), analytics.dayOfWeek.map(day => groupRow(day.label, day)),
+      { 0: { fontStyle: 'bold', halign: 'center' } })
+    addTable('30-Day Trend Analysis', columns('Period'), comparisonRows(analytics.last30, 'Last 30 Days', 'Previous 30 Days'))
+    addTable('Monthly Comparison', columns('Period'), comparisonRows(analytics.monthly, 'This Month', 'Last Month'))
   }
 
-  // Summary Statistics with section header
-  yPos = addSectionHeader('Summary Statistics', yPos)
-  
-  const summaryData = [
-    ['Metric', 'Average', 'Minimum', 'Maximum'],
-    [
-      'Systolic (mmHg)',
-      stats.avgSystolic || 'N/A',
-      stats.minSystolic || 'N/A',
-      stats.maxSystolic || 'N/A'
-    ],
-    [
-      'Diastolic (mmHg)',
-      stats.avgDiastolic || 'N/A',
-      stats.minDiastolic || 'N/A',
-      stats.maxDiastolic || 'N/A'
-    ],
-    [
-      'Pulse (bpm)',
-      stats.avgPulse || 'N/A',
-      stats.minPulse || 'N/A',
-      stats.maxPulse || 'N/A'
-    ],
-  ]
-  
-  autoTable(doc, {
-    startY: yPos,
-    head: [summaryData[0]],
-    body: summaryData.slice(1),
-    theme: 'grid',
-    headStyles: { 
-      fillColor: colors.primary,
-      fontSize: 11,
-      fontStyle: 'bold',
-      halign: 'center',
-      textColor: colors.white,
-    },
-    bodyStyles: {
-      fontSize: 10,
-    },
-    alternateRowStyles: {
-      fillColor: [245, 247, 250],
-    },
-    ...tableDefaults,
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 50 },
-      1: { halign: 'center' },
-      2: { halign: 'center' },
-      3: { halign: 'center' },
-    },
-    margin: { left: margin, right: margin },
-  })
-  
-  yPos = doc.lastAutoTable.finalY + 14
-  
-  // Check if we need a new page
-  if (yPos > 240) {
-    addReportPage()
-    yPos = 20
-  }
-  
-  // Time of Day Analysis
-  if (stats.timeOfDay && stats.timeOfDay.length > 0) {
-    yPos = addSectionHeader('Time of Day Analysis', yPos)
-    
-    const timeData = [
-      ['Period', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
-      ...stats.timeOfDay.map(slot => [
-        sanitizePdfText(slot.label),
-        slot.count,
-        slot.avgSystolic || 'N/A',
-        slot.avgDiastolic || 'N/A'
-      ])
-    ]
-    
-    autoTable(doc, {
-      startY: yPos,
-      head: [timeData[0]],
-      body: timeData.slice(1),
-      theme: 'striped',
-      headStyles: { 
-        fillColor: colors.primary,
-        fontSize: 11,
-        fontStyle: 'bold',
-        halign: 'center',
-        textColor: colors.white,
-      },
-      bodyStyles: {
-        fontSize: 10,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
-      ...tableDefaults,
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        1: { halign: 'center' },
-        2: { halign: 'center' },
-        3: { halign: 'center' },
-      },
-      margin: { left: margin, right: margin },
-    })
-    
-    yPos = doc.lastAutoTable.finalY + 14
-  }
-  
-  // Check if we need a new page
-  if (yPos > 240) {
-    addReportPage()
-    yPos = 20
-  }
-  
-  // Day of Week Pattern
-  if (stats.dayOfWeek && stats.dayOfWeek.length > 0) {
-    yPos = addSectionHeader('Day of Week Pattern', yPos)
-    
-    const dayData = [
-      ['Day', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
-      ...stats.dayOfWeek.map(day => [
-        day.label,
-        day.count,
-        day.avgSystolic || 'N/A',
-        day.avgDiastolic || 'N/A'
-      ])
-    ]
-    
-    autoTable(doc, {
-      startY: yPos,
-      head: [dayData[0]],
-      body: dayData.slice(1),
-      theme: 'striped',
-      headStyles: { 
-        fillColor: colors.primary,
-        fontSize: 11,
-        fontStyle: 'bold',
-        halign: 'center',
-        textColor: colors.white,
-      },
-      bodyStyles: {
-        fontSize: 10,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
-      ...tableDefaults,
-      columnStyles: {
-        0: { fontStyle: 'bold', halign: 'center' },
-        1: { halign: 'center' },
-        2: { halign: 'center' },
-        3: { halign: 'center' },
-      },
-      margin: { left: margin, right: margin },
-    })
-    
-    yPos = doc.lastAutoTable.finalY + 14
-  }
-  
-  // Check if we need a new page
-  if (yPos > 220) {
-    addReportPage()
-    yPos = 20
-  }
-  
-  // Trend Analysis
-  if (stats.trends) {
-    yPos = addSectionHeader('30-Day Trend Analysis', yPos)
-    
-    const trendData = [
-      ['Period', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
-      [
-        'Last 30 Days',
-        stats.trends.last30?.count || 0,
-        stats.trends.last30?.avgSystolic || 'N/A',
-        stats.trends.last30?.avgDiastolic || 'N/A'
-      ],
-      [
-        'Previous 30 Days',
-        stats.trends.prev30?.count || 0,
-        stats.trends.prev30?.avgSystolic || 'N/A',
-        stats.trends.prev30?.avgDiastolic || 'N/A'
-      ],
-      [
-        'Change',
-        '-',
-        stats.trends.change?.systolic > 0 ? `+${stats.trends.change.systolic}` : stats.trends.change?.systolic || 'N/A',
-        stats.trends.change?.diastolic > 0 ? `+${stats.trends.change.diastolic}` : stats.trends.change?.diastolic || 'N/A'
-      ],
-    ]
-    
-    autoTable(doc, {
-      startY: yPos,
-      head: [trendData[0]],
-      body: trendData.slice(1),
-      theme: 'striped',
-      headStyles: { 
-        fillColor: colors.primary,
-        fontSize: 11,
-        fontStyle: 'bold',
-        halign: 'center',
-        textColor: colors.white,
-      },
-      bodyStyles: {
-        fontSize: 10,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
-      ...tableDefaults,
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        1: { halign: 'center' },
-        2: { halign: 'center' },
-        3: { halign: 'center' },
-      },
-      margin: { left: margin, right: margin },
-    })
-    
-    yPos = doc.lastAutoTable.finalY + 14
-  }
-  
-  // Monthly Comparison
-  if (stats.monthly) {
-    // Check if we need a new page
-    if (yPos > 220) {
-      addReportPage()
-      yPos = 20
-    }
-    
-    yPos = addSectionHeader('Monthly Comparison', yPos)
-    
-    const monthlyData = [
-      ['Period', 'Readings', 'Avg Systolic', 'Avg Diastolic'],
-      [
-        'This Month',
-        stats.monthly.thisMonth?.count || 0,
-        stats.monthly.thisMonth?.avgSystolic || 'N/A',
-        stats.monthly.thisMonth?.avgDiastolic || 'N/A'
-      ],
-      [
-        'Last Month',
-        stats.monthly.lastMonth?.count || 0,
-        stats.monthly.lastMonth?.avgSystolic || 'N/A',
-        stats.monthly.lastMonth?.avgDiastolic || 'N/A'
-      ],
-      [
-        'Change',
-        '-',
-        stats.monthly.change?.systolic > 0 ? `+${stats.monthly.change.systolic}` : stats.monthly.change?.systolic || 'N/A',
-        stats.monthly.change?.diastolic > 0 ? `+${stats.monthly.change.diastolic}` : stats.monthly.change?.diastolic || 'N/A'
-      ],
-    ]
-    
-    autoTable(doc, {
-      startY: yPos,
-      head: [monthlyData[0]],
-      body: monthlyData.slice(1),
-      theme: 'striped',
-      headStyles: { 
-        fillColor: colors.primary,
-        fontSize: 11,
-        fontStyle: 'bold',
-        halign: 'center',
-        textColor: colors.white,
-      },
-      bodyStyles: {
-        fontSize: 10,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
-      ...tableDefaults,
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        1: { halign: 'center' },
-        2: { halign: 'center' },
-        3: { halign: 'center' },
-      },
-      margin: { left: margin, right: margin },
-    })
-    
-    yPos = doc.lastAutoTable.finalY + 14
-  }
-  
   // Footer on all pages
   const pageCount = doc.internal.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
-    
     doc.setDrawColor(...colors.border)
     doc.setLineWidth(0.25)
     doc.line(margin, pageHeight - 16, pageWidth - margin, pageHeight - 16)
-    
+
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...colors.muted)
-    doc.text(
-      `Page ${i} of ${pageCount}`,
-      margin,
-      pageHeight - 8
-    )
-    doc.text(
-      'BP Monitor Report',
-      pageWidth / 2,
-      pageHeight - 8,
-      { align: 'center' }
-    )
-    doc.text(
-      generatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      pageWidth - margin,
-      pageHeight - 8,
-      { align: 'right' }
-    )
+    doc.text(`Page ${i} of ${pageCount}`, margin, pageHeight - 8)
+    doc.text('BP Monitor Report', pageWidth / 2, pageHeight - 8, { align: 'center' })
+    doc.text(formatDay(generatedAt), pageWidth - margin, pageHeight - 8, { align: 'right' })
   }
-  
-  // Save the PDF with descriptive filename
-  const dateStr = new Date().toISOString().split('T')[0]
-  const periodStr = dateRange.replace(/\s+/g, '_').replace(/[()]/g, '')
-  const readingsCount = entries.length
-  const filename = `BP_Report_${dateStr}_${periodStr}_${readingsCount}readings.pdf`
-  doc.save(filename)
+
+  const dateStr = generatedAt.toISOString().split('T')[0]
+  const periodStr = dateRange.replace(/\s+/g, '_').replace(/[^\w-]/g, '')
+  doc.save(`BP_Report_${dateStr}_${periodStr}_${entries.length}readings.pdf`)
 }

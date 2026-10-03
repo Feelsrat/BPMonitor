@@ -1,182 +1,62 @@
-import { getData } from '../lib/kv.js';
+import { createHash } from 'crypto';
+import { getEntries, getValue, setValue } from '../lib/kv.js';
 
-// This endpoint is called by Vercel Cron daily
-// It backs up data to a private GitHub repository
+const HASH_KEY = 'last-backup-hash';
 
+// Called daily by Vercel Cron: commits the entries as JSON to a private GitHub
+// repository, skipping the commit when nothing changed since the last backup.
 export default async function handler(req, res) {
-  // Verify this is called by Vercel Cron (security)
-  const authHeader = req.headers.authorization;
   const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
-    const data = await getData();
-
-    if (data.length === 0) {
+    const entries = await getEntries();
+    if (entries.length === 0) {
       return res.status(200).json({ message: 'No data to backup', entries: 0 });
     }
 
-    // Get last backup hash to check for changes
-    const currentHash = await hashData(data);
-    const lastHash = await getLastBackupHash();
-
-    if (currentHash === lastHash) {
-      return res.status(200).json({
-        message: 'No changes since last backup',
-        entries: data.length,
-        skipped: true
-      });
+    const json = JSON.stringify(entries, null, 2);
+    const hash = createHash('sha256').update(json).digest('hex');
+    if (hash === await getValue(HASH_KEY)) {
+      return res.status(200).json({ message: 'No changes since last backup', entries: entries.length, skipped: true });
     }
 
-    const timestamp = new Date().toISOString();
-    const dateStr = timestamp.split('T')[0];
+    const date = new Date().toISOString().split('T')[0];
+    await commitToGitHub(`${date}.json`, json, `Backup ${date} - ${entries.length} entries`);
+    await setValue(HASH_KEY, hash);
 
-    // Generate backup file (JSON only)
-    const json = JSON.stringify(data, null, 2);
-
-    // Commit to GitHub
-    await commitToGitHub(json, dateStr, data.length);
-
-    // Save hash for next comparison
-    await saveBackupHash(currentHash);
-
-    return res.status(200).json({
-      success: true,
-      timestamp,
-      entries: data.length,
-      message: `Backup committed to GitHub: ${dateStr}`
-    });
-
+    res.status(200).json({ message: `Backup committed to GitHub: ${date}`, entries: entries.length });
   } catch (error) {
     console.error('Backup failed:', error);
-    return res.status(500).json({
-      error: 'Backup failed',
-      message: error.message
-    });
+    res.status(500).json({ error: 'Backup failed', message: error.message });
   }
 }
 
-async function hashData(data) {
-  // Create a hash of the data to detect changes
-  const str = JSON.stringify(data.map(e => ({
-    s: e.systolic,
-    d: e.diastolic,
-    p: e.pulse,
-    t: e.timestamp
-  })));
-
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(str));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function getLastBackupHash() {
-  try {
-    const { Redis } = await import('@upstash/redis');
-    const isLocal = !(process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL);
-    if (isLocal) return null;
-
-    const url = process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.BP_KV_REST_API_TOKEN;
-    const redis = new Redis({ url, token });
-
-    return await redis.get('last-backup-hash');
-  } catch (error) {
-    console.error('Failed to get last backup hash:', error);
-    return null;
-  }
-}
-
-async function saveBackupHash(hash) {
-  try {
-    const { Redis } = await import('@upstash/redis');
-    const isLocal = !(process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL);
-    if (isLocal) return;
-
-    const url = process.env.UPSTASH_REDIS_REST_URL || process.env.BP_KV_REST_API_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.BP_KV_REST_API_TOKEN;
-    const redis = new Redis({ url, token });
-
-    await redis.set('last-backup-hash', hash);
-  } catch (error) {
-    console.error('Failed to save backup hash:', error);
-  }
-}
-
-async function commitToGitHub(json, dateStr, entryCount) {
+async function commitToGitHub(path, content, message) {
   const token = process.env.GITHUB_TOKEN;
-  const repo = process.env.GITHUB_BACKUP_REPO; // format: "username/repo-name"
-
+  const repo = process.env.GITHUB_BACKUP_REPO; // "owner/repo"
   if (!token || !repo) {
-    throw new Error('GitHub credentials not configured');
+    throw new Error('GitHub credentials not configured (GITHUB_TOKEN, GITHUB_BACKUP_REPO)');
   }
 
-  const [owner, repoName] = repo.split('/');
-  
-  // Verify repository exists
-  const repoCheck = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
-    },
-  });
+  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+  };
 
-  if (!repoCheck.ok) {
-    const error = await repoCheck.text();
-    throw new Error(`Cannot access repository ${repo}: ${repoCheck.status} - ${error}`);
-  }
+  // Overwriting an existing file (a second backup on the same day) requires its sha
+  const existing = await fetch(url, { headers });
+  const sha = existing.ok ? (await existing.json()).sha : undefined;
 
-  const baseUrl = `https://api.github.com/repos/${owner}/${repoName}/contents`;
-
-  // Upload JSON file
-  await uploadFile(
-    `${baseUrl}/${dateStr}.json`,
-    json,
-    `Backup ${dateStr} - ${entryCount} entries`,
-    token
-  );
-}
-
-async function uploadFile(url, content, message, token) {
-  // Check if file exists
-  let sha = null;
-  try {
-    const check = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
-      },
-    });
-
-    if (check.ok) {
-      const existing = await check.json();
-      sha = existing.sha;
-    }
-  } catch (error) {
-    // File doesn't exist, that's ok
-  }
-
-  // Upload file
   const response = await fetch(url, {
     method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message,
-      content: Buffer.from(content).toString('base64'),
-      ...(sha && { sha }),
-    }),
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, content: Buffer.from(content).toString('base64'), sha }),
   });
-
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`GitHub API error: ${response.status} - ${error}`);
+    throw new Error(`GitHub API error: ${response.status} - ${await response.text()}`);
   }
 }

@@ -8,17 +8,8 @@
 
 <script setup>
 defineProps({
-  label: {
-    type: String,
-    required: true
-  },
-  value: {
-    type: [String, Number],
-    default: '-'
-  },
-  subtitle: {
-    type: String,
-    default: ''
-  }
+  label: { type: String, required: true },
+  value: { type: [String, Number], default: '-' },
+  subtitle: { type: String, default: '' },
 })
 </script>

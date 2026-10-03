@@ -3,19 +3,9 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install --prefix api && npm install --prefix frontend",
   "rewrites": [
-    {
-      "source": "/public",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "crons": [
-    {
-      "path": "/api/cron/backup",
-      "schedule": "0 0 * * *"
-    }
+    { "path": "/api/cron/backup", "schedule": "0 0 * * *" }
   ]
 }
