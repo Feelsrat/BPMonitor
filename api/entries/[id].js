@@ -1,16 +1,18 @@
 import { getEntries, saveEntries } from '../lib/kv.js';
 import { createHandler } from '../lib/handler.js';
-import { parseReading } from '../lib/entries.js';
+import { parseReading, isValidTimestamp } from '../lib/entries.js';
 
 // Compare as strings so ids stored as floats by older imports still match
 const findIndex = (entries, id) => entries.findIndex(e => String(e.id) === String(id));
 
 export default createHandler({
   async PATCH(req, res) {
-    const changes = parseReading(req.body ?? {}, { partial: true });
-    if (!changes) {
+    const body = req.body ?? {};
+    const changes = parseReading(body, { partial: true });
+    if (!changes || (body.timestamp !== undefined && !isValidTimestamp(body.timestamp))) {
       return res.status(400).json({ error: 'Invalid reading values' });
     }
+    if (body.timestamp !== undefined) changes.timestamp = new Date(body.timestamp).toISOString();
 
     const entries = await getEntries();
     const index = findIndex(entries, req.query.id);

@@ -1,5 +1,5 @@
 <template>
-  <div :class="['px-4 py-3 rounded-lg border', types[type]]">
+  <div role="status" :class="['rounded-lg border px-4 py-3 text-sm', types[type]]">
     <slot />
   </div>
 </template>
@@ -9,14 +9,13 @@ defineProps({
   type: {
     type: String,
     default: 'info',
-    validator: (value) => ['success', 'error', 'warning', 'info'].includes(value),
+    validator: (value) => ['success', 'error', 'info'].includes(value),
   },
 })
 
 const types = {
-  success: 'bg-green-50 border-green-200 text-green-700',
-  error: 'bg-red-50 border-red-200 text-red-700',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-700',
-  info: 'bg-blue-50 border-blue-200 text-blue-700',
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  error: 'border-red-200 bg-red-50 text-red-800',
+  info: 'border-slate-200 bg-slate-50 text-slate-700',
 }
 </script>

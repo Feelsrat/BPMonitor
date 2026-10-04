@@ -1,5 +1,9 @@
 <template>
-  <button :type="type" :disabled="disabled || loading" :class="buttonClasses">
+  <button :type="type" :disabled="disabled || loading" :class="classes">
+    <svg v-if="loading" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+    </svg>
     <slot />
   </button>
 </template>
@@ -11,33 +15,33 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'small', 'filter', 'tab'].includes(value),
+    validator: (value) => ['primary', 'secondary', 'ghost', 'danger'].includes(value),
   },
+  size: { type: String, default: 'md', validator: (value) => ['sm', 'md'].includes(value) },
   type: { type: String, default: 'button' },
   disabled: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
-  active: { type: Boolean, default: false },
   fullWidth: { type: Boolean, default: false },
 })
 
-const buttonClasses = computed(() => {
-  const variants = {
-    primary: 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-4 focus:ring-blue-500',
-    secondary: 'bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-800 py-2 px-4 focus:ring-gray-400',
-    success: 'bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 px-4 focus:ring-green-500',
-    danger: 'bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white py-2 px-4 focus:ring-red-500',
-    small: 'bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 text-sm rounded-md focus:ring-gray-300',
-    filter: props.active
-      ? 'bg-blue-600 text-white px-4 py-2 focus:ring-blue-500'
-      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 focus:ring-gray-300',
-    tab: props.active
-      ? 'border-b-2 border-blue-600 text-blue-600 px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap rounded-none focus:ring-blue-500'
-      : 'text-gray-600 hover:text-gray-800 px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap rounded-none focus:ring-gray-300',
-  }
-  return [
-    'font-semibold rounded-lg transition duration-200 focus:outline-none focus:ring-2 disabled:cursor-not-allowed',
-    variants[props.variant],
-    props.fullWidth && 'w-full',
-  ]
-})
+const variants = {
+  primary: 'bg-slate-900 text-white hover:bg-slate-700 shadow-sm',
+  secondary: 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 shadow-sm',
+  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+  danger: 'text-red-700 hover:bg-red-50',
+}
+
+const sizes = {
+  sm: 'h-8 px-3 text-sm',
+  md: 'h-10 px-4 text-sm',
+}
+
+const classes = computed(() => [
+  'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2',
+  'disabled:opacity-50 disabled:cursor-not-allowed',
+  variants[props.variant],
+  sizes[props.size],
+  props.fullWidth && 'w-full',
+])
 </script>

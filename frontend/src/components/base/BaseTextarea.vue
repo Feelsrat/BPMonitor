@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <label v-if="label" :for="id" class="block text-sm font-medium text-gray-700 mb-2">
+    <label v-if="label" :for="id" class="mb-1.5 block text-sm font-medium text-slate-700">
       {{ label }}
     </label>
     <textarea
@@ -8,7 +8,7 @@
       v-model="model"
       v-bind="$attrs"
       :rows="rows"
-      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+      class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
     ></textarea>
   </div>
 </template>
@@ -22,7 +22,7 @@ const model = defineModel({ type: String, default: '' })
 
 defineProps({
   label: { type: String, default: '' },
-  rows: { type: [String, Number], default: 3 },
+  rows: { type: [String, Number], default: 2 },
 })
 
 const id = useId()

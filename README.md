@@ -4,13 +4,15 @@ A single-user blood pressure tracker: Vue 3 frontend, Vercel Functions backend, 
 
 ## Features
 
-- Password-protected login (JWT, valid for 7 days)
-- Log readings with quick note templates
-- Charts with date range filters, CSV export and PDF reports
-- Analytics: time of day, day of week, 30-day and month-over-month trends
-- CSV/JSON import (merge or replace)
+- **Log**: quick entry with note templates; readings can be backdated
+- **History**: averages, blood pressure and pulse charts, time-of-day breakdown and a day-by-day list; tap a reading to edit or delete it
+- **Export**: a PDF report for your doctor (summary, charts, averages, every reading) and CSV
+- **Settings**: CSV/JSON import, the share link, logout
 - Shareable read-only page at `/public` (notes are never shown there)
 - Daily GitHub backups via Vercel Cron
+- Password-protected (JWT, valid for 7 days)
+
+Charts show individual readings for ranges up to ~6 weeks, and daily or weekly averages (with a min-max band) for longer ones. The PDF renders the same charts.
 
 ## Local development
 
@@ -42,9 +44,11 @@ api/                    Vercel Functions
   cron/backup.js        daily GitHub backup
   auth.js entries.js public.js health.js
 frontend/src/
-  components/           tabs, BPChart, base/ (auto-registered Base* components)
+  views/                Log, History (also the public page), Export, Settings
+  components/           shared pieces; base/ holds the auto-registered Base* components
+  composables/          useEntries: cached readings shared between views
   services/api.js       axios client and auth token handling
-  utils/                stats helpers and PDF report
+  utils/                bp.js (stats, ranges), chart.js (Chart.js config), report.js (PDF), importFile.js
 dev-server.js           runs the api/ functions locally with Express
 ```
 
@@ -56,7 +60,7 @@ dev-server.js           runs the api/ functions locally with Express
 | GET | `/api/health/` | – | Health check |
 | GET | `/api/public/` | – | Readings without notes, for the public page |
 | GET | `/api/entries/` | ✓ | All readings, newest first |
-| POST | `/api/entries/` | ✓ | Create `{ systolic, diastolic, pulse, notes? }` |
+| POST | `/api/entries/` | ✓ | Create `{ systolic, diastolic, pulse, notes?, timestamp? }` |
 | PATCH | `/api/entries/:id/` | ✓ | Update fields of a reading |
 | DELETE | `/api/entries/:id/` | ✓ | Delete a reading |
 | GET | `/api/entries/export/` | ✓ | All readings as CSV |
@@ -74,7 +78,7 @@ dev-server.js           runs the api/ functions locally with Express
 
 ### GitHub backups
 
-Vercel Cron calls `/api/cron/backup` daily at midnight UTC. It writes the readings as `YYYY-MM-DD.json` to `GITHUB_BACKUP_REPO` (`owner/repo`), and skips the commit when nothing changed since the last backup. The JSON files can be imported directly from the Import tab.
+Vercel Cron calls `/api/cron/backup` daily at midnight UTC. It writes the readings as `YYYY-MM-DD.json` to `GITHUB_BACKUP_REPO` (`owner/repo`), and skips the commit when nothing changed since the last backup. The JSON files can be imported from Settings.
 
 1. Create a private repository for the backups.
 2. Create a fine-grained GitHub token with **Contents: read and write** on that repository only.

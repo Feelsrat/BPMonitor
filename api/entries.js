@@ -1,6 +1,6 @@
 import { getEntries, saveEntries } from './lib/kv.js';
 import { createHandler } from './lib/handler.js';
-import { parseReading, idGenerator } from './lib/entries.js';
+import { parseReading, isValidTimestamp, idGenerator } from './lib/entries.js';
 
 export default createHandler({
   async GET(req, res) {
@@ -8,9 +8,14 @@ export default createHandler({
   },
 
   async POST(req, res) {
-    const reading = parseReading(req.body ?? {});
+    const body = req.body ?? {};
+    const reading = parseReading(body);
     if (!reading) {
       return res.status(400).json({ error: 'Systolic, diastolic and pulse must be valid numbers' });
+    }
+    // Optional, to record a reading taken earlier
+    if (body.timestamp !== undefined && !isValidTimestamp(body.timestamp)) {
+      return res.status(400).json({ error: 'Invalid timestamp' });
     }
 
     const entries = await getEntries();
@@ -18,7 +23,7 @@ export default createHandler({
       id: idGenerator(entries)(),
       notes: '',
       ...reading,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(body.timestamp ?? Date.now()).toISOString(),
     };
     entries.push(entry);
     await saveEntries(entries);
